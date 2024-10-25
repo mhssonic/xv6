@@ -5,20 +5,22 @@
 
 
 void print_child_processes(struct child_proccesses *cp);
+void create_childeren();
+
 int main(int argc, char *argv[]) {
   struct child_proccesses* childeren = malloc(sizeof(*childeren));
-  if(argc < 2){
-    fprintf(2, "usage: kill pid...\n");
+  // if(argc < 2){
+  //   fprintf(2, "usage: kill pid...\n");
+  //   exit(1);
+  // }
+  // get_child(atoi(argv[1]), childeren);
+  int currect_pid = getpid();
+  if (currect_pid < 0) {
     exit(1);
   }
-  get_child(atoi(argv[1]), childeren);
+  create_childeren();
+  get_child(currect_pid, childeren);
   print_child_processes(childeren);
-  // printf("number of childeren :%d\n", childeren->count);
-  // printf
-  // for(int i = 0; i < childeren->count; i++){
-  //   print("")
-  // }
-
   exit(0);
 }
 
@@ -60,4 +62,21 @@ void print_child_processes(struct child_proccesses *cp) {
         // Print the process name
         printf("%s\n", proc->name);
     }
+}
+
+void create_childeren(){
+  int pid = fork();
+  if(pid < 0){
+    return;
+  }
+  if(pid > 0){
+    sleep(10);
+    return;
+  }
+  fork();
+  fork();
+  // printf("child is sleeping\n");
+  sleep(5000000);
+  printf("child is exiting\n");
+  exit(0);
 }

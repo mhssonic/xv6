@@ -17,6 +17,8 @@ struct spinlock pid_lock;
 
 extern void forkret(void);
 static void freeproc(struct proc *p);
+void get_child_reverse(int pid, struct proc_info childeren[], int* last);
+
 
 extern char trampoline[]; // trampoline.S
 
@@ -693,3 +695,35 @@ procdump(void)
     printf("\n");
   }
 }
+
+struct child_proccesses* get_child(int pid)
+{
+  printf("here 1\n");
+  struct child_proccesses *childeren = (struct child_proccesses*)kalloc();
+  int last = 0;
+  get_child_reverse(pid, childeren->proccesses, &last);
+  return childeren;
+} 
+
+void get_child_reverse(int pid, struct proc_info childeren[], int* last)
+{
+  printf("here\n");
+  struct proc *p;
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->parent->pid == pid){
+      struct proc_info *child = &childeren[*last]; 
+      (*last)++;
+      child->pid = p->pid;
+      child->ppid = pid;
+      child->state = p->state;
+      strncpy(child->name, p->name, 16);
+      get_child_reverse(child->pid, childeren, last);
+      release(&p->lock);
+    }
+    printf("%s, %d", p->name, p->pid);
+    release(&p->lock);
+  }
+  printf("%d", *last);
+  return;
+} 

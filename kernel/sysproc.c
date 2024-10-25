@@ -91,3 +91,14 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_get_child(void)
+{
+  // int pid;
+  // argint(0, &pid);
+  // struct child_proccesses *result = get_child(pid);
+  get_child(0);
+  // printf("hi %d, %d \n", pid , result->count);
+  return 0;
+}

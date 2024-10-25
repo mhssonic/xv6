@@ -1,4 +1,5 @@
 struct stat;
+struct child_proccesses;
 
 // system calls
 int fork(void);
@@ -22,7 +23,7 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-int get_child(int);
+int get_child(int pid, struct child_proccesses* childe);
 
 // ulib.c
 int stat(const char*, struct stat*);

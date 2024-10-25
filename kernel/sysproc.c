@@ -92,13 +92,17 @@ sys_uptime(void)
   return xticks;
 }
 
-uint64
-sys_get_child(void)
-{
-  // int pid;
-  // argint(0, &pid);
-  // struct child_proccesses *result = get_child(pid);
-  get_child(0);
-  // printf("hi %d, %d \n", pid , result->count);
+uint64 sys_get_child(void){
+  int pid;
+  argint(0, &pid);
+  struct child_proccesses *result = get_child(pid);
+
+  uint64 uaddr;
+  argaddr(1, &uaddr);
+  // Copy the info struct to the user-space address
+  if (copyout(myproc()->pagetable, uaddr, (char *)result, sizeof(*result)) < 0) {
+      return -1;  // Error if copy fails
+  }
+  kfree(result);
   return 0;
 }

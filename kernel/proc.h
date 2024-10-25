@@ -1,4 +1,6 @@
+#include "user/mystruct.h"
 // Saved registers for kernel context switches.
+#define NULL ((void *)0)
 struct context {
   uint64 ra;
   uint64 sp;
@@ -79,8 +81,6 @@ struct trapframe {
   /* 280 */ uint64 t6;
 };
 
-enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
-
 // Per-process state
 struct proc {
   struct spinlock lock;
@@ -104,18 +104,4 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-};
-
-
-struct proc_info {
-  enum procstate state;        // Process state
-  int pid;                     // Process ID
-  int ppid;         // Parent process ID
-  char name[16];               // Process name (debugging)
-};
-
-struct child_proccesses {
-  int count;                     // Process ID
-  int ppid;         // Parent process ID
-  struct proc_info proccesses[NPROC];               // Process name (debugging)
 };

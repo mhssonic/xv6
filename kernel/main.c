@@ -40,6 +40,9 @@ main()
     trapinithart();   // install kernel trap vector
     plicinithart();   // ask PLIC for device interrupts
   }
-
+  // if(err != 0){
+  //   printf("faild to init trap file\n");
+  //   exit(err);
+  // }
   scheduler();        
 }

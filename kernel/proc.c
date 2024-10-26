@@ -5,12 +5,20 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "user/mystruct.h"
 
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
+struct {
+  struct trap_log reports[MAX_REPORT_BUFFER_SIZE];
+  int numberOfReport;
+  int firstReport;
+} _internal_report_list;
+
 
 struct proc *initproc;
+
 
 int nextpid = 1;
 struct spinlock pid_lock;
@@ -625,8 +633,7 @@ setkilled(struct proc *p)
   release(&p->lock);
 }
 
-int
-killed(struct proc *p)
+int killed(struct proc *p)
 {
   int k;
   
@@ -698,14 +705,6 @@ procdump(void)
 
 struct child_proccesses* get_child(int pid)
 {
-  struct proc *p;
-  for(p = proc; p < &proc[NPROC]; p++){
-    acquire(&p->lock);
-    if(p->parent != NULL){
-      printf("child: %d paretn: %d\n", p->pid, p->parent->pid);
-    }
-    release(&p->lock);
-  }
   struct child_proccesses *childeren = (struct child_proccesses*)kalloc();
   childeren->count = 0;
   get_child_reverse(pid, childeren->proccesses, &childeren->count);
@@ -733,3 +732,64 @@ void get_child_reverse(int pid, struct proc_info childeren[], int* last)
   }
   return;
 } 
+
+void log_trap(struct proc* p, uint64 scause, uint64 spec, uint64 stval){
+  int new_index = _internal_report_list.numberOfReport + _internal_report_list.firstReport;
+  if (new_index >= MAX_REPORT_BUFFER_SIZE){
+    new_index -= MAX_REPORT_BUFFER_SIZE;
+    if (new_index == _internal_report_list.firstReport)
+      _internal_report_list.firstReport ++;
+  }
+  struct trap_log *new_log = &(_internal_report_list.reports[new_index]);
+  new_log->pid = p->pid;
+  strncpy(new_log->pname, p->name, 16);
+  new_log->scause = scause;
+  new_log->sepc = spec;
+  new_log->stval = stval;
+  struct proc *parent = p->parent;
+  for(int i = 0; i < 4; i++){
+    if (parent == NULL)
+      break;
+    new_log->parents[i] = parent->pid;
+    // printf("added parent %d\n", parent->pid);
+    parent = parent->parent;
+  }
+  _internal_report_list.numberOfReport++;
+  // printf("number of reports %d \n", _internal_report_list.numberOfReport);
+  log_trap_to_file(new_log);
+}
+
+
+void get_log(int pid, struct report_traps* result){
+  result->count = 0;
+  int i = _internal_report_list.firstReport;
+  printf("for pid %d \n", pid);
+  for (int n = 0; n < _internal_report_list.numberOfReport; n++){
+    struct trap_log log = _internal_report_list.reports[(i + n) % MAX_REPORT_BUFFER_SIZE];
+    printf("%d: ", log.pid);
+    for (int k = 0; k < 4; k++){
+      printf("%d ", log.parents[k]);
+    }
+    printf("\n");
+  }
+
+
+  i = _internal_report_list.firstReport;
+  for (int n = 0; n < _internal_report_list.numberOfReport; n++){
+    struct trap_log log = _internal_report_list.reports[(i + n) % MAX_REPORT_BUFFER_SIZE];
+    int not_the_father = 1;
+    for (int k = 0; k < 4; k++){
+      if(log.parents[k] == pid){
+        not_the_father = 0;
+        break;
+      }
+    }
+    if (not_the_father)
+      continue;
+
+    result->reports[result->count] = log;
+    result->count ++;
+  }
+  return;
+}
+

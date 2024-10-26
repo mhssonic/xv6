@@ -1,4 +1,7 @@
+#ifndef MYSTRUCT_H
+#define MYSTRUCT_H
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+
 struct proc_info {
   enum procstate state;        // Process state
   int pid;                     // Process ID
@@ -11,3 +14,5 @@ struct child_proccesses {
 //   int ppid;         // Parent process ID
   struct proc_info proccesses[64];               // Process name (debugging)
 };
+
+#endif // MYSTRUCT_H

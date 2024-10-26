@@ -106,3 +106,20 @@ uint64 sys_get_child(void){
   kfree(result);
   return 0;
 }
+
+
+uint64 sys_get_log(void){
+  int pid;
+  argint(0, &pid);
+
+  struct report_traps result;
+  get_log(pid, &result);
+
+  uint64 uaddr;
+  argaddr(1, &uaddr);
+  // Copy the info struct to the user-space address
+  if (copyout(myproc()->pagetable, uaddr, (char *)&result, sizeof(result)) < 0) {
+      return -1;  // Error if copy fails
+  }
+  return 0;
+}

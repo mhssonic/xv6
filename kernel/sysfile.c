@@ -503,3 +503,71 @@ sys_pipe(void)
   }
   return 0;
 }
+
+
+static struct file *log_file = NULL;
+struct spinlock log_file_lock;
+int log_file_initialized = 0;
+
+
+void init_log_file() {
+    struct inode *ip; 
+
+
+    acquire(&log_file_lock);
+
+    // If the log file is already initialized, release lock and return
+    if (log_file_initialized) {
+        // release(&log_file_lock);
+        while (log_file == NULL) {
+            sleep(&log_file, &log_file_lock);
+        }
+        return;
+    }
+    log_file_initialized = 1;
+    release(&log_file_lock);
+
+    begin_op();
+    ip = create("traplog", T_FILE, 0, 0);
+    end_op();
+    if (ip == NULL) {
+        printf("Error creating/opening trap log file\n");
+        log_file_initialized = 0;
+        return;
+    }
+    // Allocate a file structure and set up the log file
+    log_file = filealloc();
+    if (log_file == NULL) {
+        printf("Error allocating file structure for trap log\n");
+        iput(ip);
+        log_file_initialized = 0; 
+        return;
+    }
+
+    log_file->type = FD_INODE;
+    log_file->ip = ip;    
+    log_file->writable = 1;
+    log_file->off = ip->size;
+    log_file_initialized = 1;
+    printf("i giving away the key\n");
+    // release(&log_file_lock);
+}
+
+
+void log_trap_to_file(struct trap_log *log) {
+    if (log_file == NULL) {
+        init_log_file();
+        if (log_file == NULL) {
+            printf("Log file initialization failed\n");
+            return;
+        }
+    }
+
+    filewrite(log_file, (uint64)log, sizeof(struct trap_log));
+}
+void close_log_file() {
+    if (log_file != NULL) {
+        fileclose(log_file);
+        log_file = NULL;
+    }
+}

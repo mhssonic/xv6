@@ -12,12 +12,16 @@
 #include "file.h"
 #include "stat.h"
 #include "proc.h"
+#include "kernel/fcntl.h"
+#include "kernel/stat.h"
 
 struct devsw devsw[NDEV];
 struct {
   struct spinlock lock;
   struct file file[NFILE];
 } ftable;
+
+
 
 void
 fileinit(void)
@@ -179,4 +183,3 @@ filewrite(struct file *f, uint64 addr, int n)
 
   return ret;
 }
-

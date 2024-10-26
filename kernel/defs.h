@@ -8,6 +8,9 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct report_traps;
+#include "user/repstruct.h"
+
 
 // bio.c
 void            binit(void);
@@ -33,6 +36,7 @@ void            fileinit(void);
 int             fileread(struct file*, uint64, int n);
 int             filestat(struct file*, uint64 addr);
 int             filewrite(struct file*, uint64, int n);
+void log_trap_to_file(struct trap_log *log);
 
 // fs.c
 void            fsinit(int);
@@ -107,6 +111,8 @@ int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 struct child_proccesses* get_child(int pid);
+void log_trap(struct proc* p, uint64 scause, uint64 spec, uint64 stval);
+void get_log(int pid, struct report_traps*);
 // swtch.S
 void            swtch(struct context*, struct context*);
 
@@ -187,3 +193,5 @@ void            virtio_disk_intr(void);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+void log_trap_to_file(struct trap_log *log);

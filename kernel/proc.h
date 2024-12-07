@@ -1,6 +1,8 @@
 #include "user/mystruct.h"
+#include "thread.h"
 // Saved registers for kernel context switches.
 #define NULL ((void *)0)
+#define MAX_THREAD 4
 struct context {
   uint64 ra;
   uint64 sp;
@@ -99,6 +101,8 @@ struct proc {
   uint64 kstack;               // Virtual address of kernel stack
   uint64 sz;                   // Size of process memory (bytes)
   pagetable_t pagetable;       // User page table
+  struct thread threads[MAX_THREAD];
+  struct thread *crurent_thread;
   struct trapframe *trapframe; // data page for trampoline.S
   struct context context;      // swtch() here to run process
   struct file *ofile[NOFILE];  // Open files

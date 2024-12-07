@@ -159,6 +159,50 @@ found:
   return p;
 }
 
+
+// static struct proc*
+// allocproc(void)
+// {
+//   struct proc *p;
+
+//   for(p = proc; p < &proc[NPROC]; p++) {
+//     acquire(&p->lock);
+//     if(p->state == UNUSED) {
+//       goto found;
+//     } else {
+//       release(&p->lock);
+//     }
+//   }
+//   return 0;
+
+// found:
+//   p->pid = allocpid();
+//   p->state = USED;
+
+//   // Allocate a trapframe page.
+//   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+//     freeproc(p);
+//     release(&p->lock);
+//     return 0;
+//   }
+
+//   // An empty user page table.
+//   p->pagetable = proc_pagetable(p);
+//   if(p->pagetable == 0){
+//     freeproc(p);
+//     release(&p->lock);
+//     return 0;
+//   }
+
+//   // Set up new context to start executing at forkret,
+//   // which returns to user space.
+//   memset(&p->context, 0, sizeof(p->context));
+//   p->context.ra = (uint64)forkret;
+//   p->context.sp = p->kstack + PGSIZE;
+
+//   return p;
+// }
+
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
@@ -288,6 +332,57 @@ growproc(int n)
 // Sets up child kernel stack to return as if from fork() system call.
 int
 fork(void)
+{
+  int i, pid;
+  struct proc *np;
+  struct proc *p = myproc();
+
+  // Allocate process.
+  if((np = allocproc()) == 0){
+    return -1;
+  }
+
+  // Copy user memory from parent to child.
+  if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
+    freeproc(np);
+    release(&np->lock);
+    return -1;
+  }
+  np->sz = p->sz;
+
+  // copy saved user registers.
+  *(np->trapframe) = *(p->trapframe);
+
+  // Cause fork to return 0 in the child.
+  np->trapframe->a0 = 0;
+
+  // increment reference counts on open file descriptors.
+  for(i = 0; i < NOFILE; i++)
+    if(p->ofile[i])
+      np->ofile[i] = filedup(p->ofile[i]);
+  np->cwd = idup(p->cwd);
+
+  safestrcpy(np->name, p->name, sizeof(p->name));
+
+  pid = np->pid;
+
+  release(&np->lock);
+
+  acquire(&wait_lock);
+  np->parent = p;
+  release(&wait_lock);
+
+  acquire(&np->lock);
+  np->state = RUNNABLE;
+  release(&np->lock);
+
+  return pid;
+}
+
+// Create a new process, copying the parent.
+// Sets up child kernel stack to return as if from fork() system call.
+int
+create_tread(void)
 {
   int i, pid;
   struct proc *np;

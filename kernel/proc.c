@@ -160,48 +160,49 @@ found:
 }
 
 
-// static struct proc*
-// allocproc(void)
-// {
-//   struct proc *p;
+static struct proc*
+allocthread(void)
+{
+  struct proc *p = myproc();
+  struct thread *t;
 
-//   for(p = proc; p < &proc[NPROC]; p++) {
-//     acquire(&p->lock);
-//     if(p->state == UNUSED) {
-//       goto found;
-//     } else {
-//       release(&p->lock);
-//     }
-//   }
-//   return 0;
+  for(t = proc->threads; t < &proc->threads[MAX_THREAD]; t++) {
+    acquire(&p->lock);
+    if(t->state == THREAD_FREE) {
+      goto found;
+    } else {
+      release(&p->lock);
+    }
+  }
+  return 0;
 
-// found:
-//   p->pid = allocpid();
-//   p->state = USED;
+found:
+  t->thread = allocpid();
+  t->state = THREAD_RUNNABLE;
 
-//   // Allocate a trapframe page.
-//   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
-//     freeproc(p);
-//     release(&p->lock);
-//     return 0;
-//   }
+  // Allocate a trapframe page.
+  if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
 
-//   // An empty user page table.
-//   p->pagetable = proc_pagetable(p);
-//   if(p->pagetable == 0){
-//     freeproc(p);
-//     release(&p->lock);
-//     return 0;
-//   }
+  // An empty user page table.
+  p->pagetable = proc_pagetable(p);
+  if(p->pagetable == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
 
-//   // Set up new context to start executing at forkret,
-//   // which returns to user space.
-//   memset(&p->context, 0, sizeof(p->context));
-//   p->context.ra = (uint64)forkret;
-//   p->context.sp = p->kstack + PGSIZE;
+  // Set up new context to start executing at forkret,
+  // which returns to user space.
+  memset(&p->context, 0, sizeof(p->context));
+  p->context.ra = (uint64)forkret;
+  p->context.sp = p->kstack + PGSIZE;
 
-//   return p;
-// }
+  return p;
+}
 
 // free a proc structure and the data hanging from it,
 // including user pages.

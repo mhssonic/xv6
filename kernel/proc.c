@@ -22,6 +22,7 @@ struct proc *initproc;
 
 int nextpid = 1;
 struct spinlock pid_lock;
+
 int nexttid = 1;
 struct spinlock tid_lock;
 
@@ -204,15 +205,15 @@ freethread(struct thread *t)
 static struct thread*
 allocthread(void)
 {
-  struct proc *p = myproc();
   struct thread *t;
-
+  struct proc *p = myproc();
+  
   for(t = proc->threads; t < &proc->threads[MAX_THREAD]; t++) {
     acquire(&p->lock);
     if(t->state == THREAD_FREE) {
       goto found;
     } else {
-      release(&p->lock);
+      release(&p->lock);   //it isn't efficient to release lock afther for???
     }
   }
   return 0;
@@ -236,6 +237,23 @@ found:
   //   release(&p->lock);
   //   return 0;
   // }
+
+  //  STACK 
+
+  /*
+  // Allocate stack for the thread
+    if ((t->kstack = kalloc()) == 0) {
+        freethread(t);
+        release(&p->lock);
+        return 0;
+    }
+
+    // Initialize trapframe
+    memset(t->trapframe, 0, sizeof(*t->trapframe));
+    t->trapframe->ra = (uint64)thread_start; // Thread entry point
+    t->trapframe->sp = (uint64)t->kstack + PGSIZE; // Top of stack
+  
+  */
 
   t->trapframe->ra = -1;
   //TODO fix it 
@@ -425,9 +443,15 @@ fork(void)
 int
 create_tread(void)
 {
-  int i, pid;
+  int i, tid;
   struct thread *nt;
   struct proc *p = myproc();
+
+  /*
+  if((nt = allocthread()) == 0){
+    printf("hadi");
+  }
+  */
 
   // Allocate thread.
   if((nt = allocthread()) == 0){

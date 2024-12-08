@@ -23,6 +23,10 @@ struct proc *initproc;
 int nextpid = 1;
 struct spinlock pid_lock;
 
+int nexttid = 1;
+struct spinlock tid_lock;
+
+
 extern void forkret(void);
 static void freeproc(struct proc *p);
 void get_child_reverse(int, struct proc_info[], int*);
@@ -159,49 +163,103 @@ found:
   return p;
 }
 
+int
+alloctid()
+{
+  int tid;
+  
+  acquire(&tid_lock);
+  tid = nexttid;
+  nexttid = nexttid + 1;
+  release(&tid_lock);
 
-static struct proc*
+  return tid;
+}
+
+static void
+freethread(struct thread *t)
+{
+  if(t->trapframe)
+    kfree((void*)t->trapframe);
+  t->trapframe = 0;
+
+  /*
+  if(p->pagetable)
+    proc_freepagetable(p->pagetable, p->sz);
+  p->pagetable = 0;
+  p->sz = 0;
+  p->pid = 0;
+  p->parent = 0;
+  p->name[0] = 0;
+  p->chan = 0;
+  p->killed = 0;
+  p->xstate = 0;
+  p->state = UNUSED;
+  */
+
+  t->id = 0;
+  t->state = THREAD_FREE;
+  t->join = 0; // zero is correct???
+}
+
+static struct thread*
 allocthread(void)
 {
-  struct proc *p = myproc();
   struct thread *t;
-
+  struct proc *p = myproc();
+  
   for(t = proc->threads; t < &proc->threads[MAX_THREAD]; t++) {
     acquire(&p->lock);
     if(t->state == THREAD_FREE) {
       goto found;
     } else {
-      release(&p->lock);
+      release(&p->lock);   //it isn't efficient to release lock afther for???
     }
   }
   return 0;
 
 found:
-  t->thread = allocpid();
+  t->id = alloctid();
   t->state = THREAD_RUNNABLE;
 
   // Allocate a trapframe page.
-  if((p->trapframe = (struct trapframe *)kalloc()) == 0){
-    freeproc(p);
+  if((t->trapframe = (struct trapframe *)kalloc()) == 0){
+    freethread(t);
     release(&p->lock);
     return 0;
   }
 
-  // An empty user page table.
-  p->pagetable = proc_pagetable(p);
-  if(p->pagetable == 0){
-    freeproc(p);
-    release(&p->lock);
-    return 0;
-  }
+  //TODO stack goes
+  // // An empty user page table.
+  // p->pagetable = proc_pagetable(p);
+  // if(p->pagetable == 0){
+  //   freeproc(p);
+  //   release(&p->lock);
+  //   return 0;
+  // }
 
-  // Set up new context to start executing at forkret,
-  // which returns to user space.
-  memset(&p->context, 0, sizeof(p->context));
-  p->context.ra = (uint64)forkret;
-  p->context.sp = p->kstack + PGSIZE;
+  //  STACK 
 
-  return p;
+  /*
+  // Allocate stack for the thread
+    if ((t->kstack = kalloc()) == 0) {
+        freethread(t);
+        release(&p->lock);
+        return 0;
+    }
+
+    // Initialize trapframe
+    memset(t->trapframe, 0, sizeof(*t->trapframe));
+    t->trapframe->ra = (uint64)thread_start; // Thread entry point
+    t->trapframe->sp = (uint64)t->kstack + PGSIZE; // Top of stack
+  
+  */
+
+  t->trapframe->ra = -1;
+  //TODO fix it 
+  t->trapframe->sp = p->kstack + PGSIZE + PGSIZE / 2;
+
+  return t;
 }
 
 // free a proc structure and the data hanging from it,
@@ -385,12 +443,18 @@ fork(void)
 int
 create_tread(void)
 {
-  int i, pid;
-  struct proc *np;
+  int i, tid;
+  struct thread *nt;
   struct proc *p = myproc();
 
-  // Allocate process.
-  if((np = allocproc()) == 0){
+  /*
+  if((nt = allocthread()) == 0){
+    printf("hadi");
+  }
+  */
+
+  // Allocate thread.
+  if((nt = allocthread()) == 0){
     return -1;
   }
 

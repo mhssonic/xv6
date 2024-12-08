@@ -123,3 +123,10 @@ uint64 sys_get_log(void){
   }
   return 0;
 }
+
+
+uint64
+sys_create_thread(void)
+{
+  return create_tread();
+}

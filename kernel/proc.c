@@ -183,19 +183,18 @@ freethread(struct thread *t)
     kfree((void*)t->trapframe);
   t->trapframe = 0;
 
-  /*
-  if(p->pagetable)
-    proc_freepagetable(p->pagetable, p->sz);
-  p->pagetable = 0;
-  p->sz = 0;
-  p->pid = 0;
-  p->parent = 0;
-  p->name[0] = 0;
-  p->chan = 0;
-  p->killed = 0;
-  p->xstate = 0;
-  p->state = UNUSED;
-  */
+  //TODO
+  // if(p->pagetable)
+  //   proc_freepagetable(p->pagetable, p->sz);
+  // p->pagetable = 0;
+  // p->sz = 0;
+  // p->pid = 0;
+  // p->parent = 0;
+  // p->name[0] = 0;
+  // p->chan = 0;
+  // p->killed = 0;
+  // p->xstate = 0;
+  // p->state = UNUSED;
 
   t->id = 0;
   t->state = THREAD_FREE;
@@ -257,7 +256,7 @@ found:
 
   t->trapframe->ra = -1;
   //TODO fix it 
-  t->trapframe->sp = p->kstack + PGSIZE + PGSIZE / 2;
+  t->trapframe->sp = p->kstack + PGSIZE / 2;
 
   return t;
 }
@@ -438,10 +437,8 @@ fork(void)
   return pid;
 }
 
-// Create a new process, copying the parent.
-// Sets up child kernel stack to return as if from fork() system call.
 int
-create_tread(void)
+create_tread(void (*start_routine)(void*), void *arg)
 {
   int i, tid;
   struct thread *nt;
@@ -458,41 +455,25 @@ create_tread(void)
     return -1;
   }
 
-  // Copy user memory from parent to child.
-  if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
-    freeproc(np);
-    release(&np->lock);
-    return -1;
-  }
-  np->sz = p->sz;
-
   // copy saved user registers.
-  *(np->trapframe) = *(p->trapframe);
+  *(nt->trapframe) = *(p->trapframe);
 
   // Cause fork to return 0 in the child.
-  np->trapframe->a0 = 0;
+  nt->trapframe->a0 = 0;
 
-  // increment reference counts on open file descriptors.
-  for(i = 0; i < NOFILE; i++)
-    if(p->ofile[i])
-      np->ofile[i] = filedup(p->ofile[i]);
-  np->cwd = idup(p->cwd);
+  tid = nt->id;
 
-  safestrcpy(np->name, p->name, sizeof(p->name));
+  nt->state = THREAD_RUNNABLE;
 
-  pid = np->pid;
+  nt->trapframe->epc = (uint64)start_routine;
+  nt->trapframe->a0 = (uint64)arg;
 
-  release(&np->lock);
+  //TODO add it for extra point
+  // nt->trapframe->kernel_hartid = r_tp();
 
-  acquire(&wait_lock);
-  np->parent = p;
-  release(&wait_lock);
+  release(&p->lock);
 
-  acquire(&np->lock);
-  np->state = RUNNABLE;
-  release(&np->lock);
-
-  return pid;
+  return tid;
 }
 
 // Pass p's abandoned children to init.

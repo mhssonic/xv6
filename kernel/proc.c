@@ -64,6 +64,7 @@ procinit(void)
   struct proc *p;
   
   initlock(&pid_lock, "nextpid");
+  initlock(&tid_lock, "nexttid");
   initlock(&wait_lock, "wait_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
@@ -212,7 +213,7 @@ allocthread(void)
     if(t->state == THREAD_FREE) {
       goto found;
     } else {
-      release(&p->lock);   //it isn't efficient to release lock afther for???
+      release(&p->lock); 
     }
   }
   return 0;

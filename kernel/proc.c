@@ -438,9 +438,9 @@ fork(void)
 }
 
 int
-create_tread(void (*start_routine)(void*), void *arg)
+create_thread(void (*start_routine)(void*), void *arg)
 {
-  int i, tid;
+  int tid;
   struct thread *nt;
   struct proc *p = myproc();
 

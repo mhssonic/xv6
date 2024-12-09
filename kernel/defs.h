@@ -115,6 +115,8 @@ void            procdump(void);
 struct child_proccesses* get_child(int pid);
 void log_trap(struct proc* p, uint64 scause, uint64 spec, uint64 stval);
 void get_log(int pid, struct report_traps*);
+int create_thread(void (*start_routine)(void*), void *arg);
+
 // swtch.S
 void            swtch(struct context*, struct context*);
 

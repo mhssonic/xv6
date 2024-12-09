@@ -26,6 +26,9 @@ int sleep(int);
 int uptime(void);
 int get_child(int pid, struct child_proccesses* child);
 int get_log(int pid, struct report_traps* reports);
+int create_thread(void (*start_routine)(void*), void *arg);
+int join_thread(int);
+int exit_thread(int);
 
 // ulib.c
 int stat(const char*, struct stat*);

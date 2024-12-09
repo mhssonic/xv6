@@ -128,16 +128,29 @@ uint64 sys_get_log(void){
 uint64
 sys_create_thread(void)
 {
-    void (*func)(void); 
-    int arg;
+    void (*func)(void *); 
+    void *arg;
 
-    if (argptr(0, (void *)&func, sizeof(void *)) < 0) {
-        return -1;  
-    }
+    argaddr(0 , (uint64 *)&func);
+    argaddr(1 , (uint64 *)&arg);
 
-    if (argint(1, &arg) < 0) {
-        return -1; 
-    }
+    return create_thread(func, arg);
+}
 
-    return create_thread(func, (void *)&arg);
+uint64 
+sys_join_thread(void)
+{
+
+  while(1);
+
+  return 0;
+}
+
+uint64
+sys_exit_thread(void)
+{
+
+  while (1);
+  
+  return 0;
 }

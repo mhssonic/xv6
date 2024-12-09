@@ -22,3 +22,6 @@
 #define SYS_close  21
 #define SYS_get_child  22
 #define SYS_get_log  23
+#define SYS_create_thread 24
+#define SYS_join_thread 25
+#define SYS_exit_thread 26

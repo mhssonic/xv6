@@ -122,6 +122,20 @@ allocpid()
   return pid;
 }
 
+
+int
+alloctid()
+{
+  int tid;
+  
+  acquire(&tid_lock);
+  tid = nexttid;
+  nexttid = nexttid + 1;
+  release(&tid_lock);
+
+  return tid;
+}
+
 // Look in the process table for an UNUSED proc.
 // If found, initialize state required to run in the kernel,
 // and return with p->lock held.
@@ -152,12 +166,14 @@ found:
     return 0;
   }
   struct thread *t;
-  for (t = p->threads; t <= &p->threads[MAX_THREAD]; t++)
+  for (t = p->threads; t < &p->threads[MAX_THREAD]; t++){
     if((t->trapframe = (struct trapframe *)kalloc()) == 0){
       freethread(t);
       release(&p->lock);
       return 0;
     }
+    t->id = alloctid();
+  }
   p->currenct_thread = p->threads;
   p->trapframe = p->currenct_thread->trapframe;
 
@@ -180,18 +196,6 @@ found:
   return p;
 }
 
-int
-alloctid()
-{
-  int tid;
-  
-  acquire(&tid_lock);
-  tid = nexttid;
-  nexttid = nexttid + 1;
-  release(&tid_lock);
-
-  return tid;
-}
 
 static void
 freethread(struct thread *t)
@@ -430,18 +434,15 @@ fork(void)
   *(np->trapframe) = *(p->trapframe);
 
   struct thread *nt, *ot;
-  int j = 0;
   for (nt = np->threads, ot = p->threads; nt < &np->threads[MAX_THREAD]; nt++, ot++) {
-    j++;
-    *(nt) = *(ot);
+    //TODO its wrong and broken
+    nt->join = ot->join;
+    nt->state = ot->state;
     *(nt->trapframe) = *(ot->trapframe);
-    if (p->currenct_thread == ot){
-      printf("j is here and = %d\n", j);
+    if (p->currenct_thread == ot)
       np->currenct_thread = nt;
-    }
   }
-
-  // np->trapframe = np->currenct_thread->trapframe;
+  np->trapframe = np->currenct_thread->trapframe;
 
 
   // Cause fork to return 0 in the child.
@@ -779,7 +780,7 @@ yield(void)
 {
   struct proc *p = myproc();
   acquire(&p->lock);
-  printf("2\n");
+  // printf("2\n");
   p->state = RUNNABLE;
   p->currenct_thread->state = THREAD_RUNNABLE;
   sched();

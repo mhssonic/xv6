@@ -146,11 +146,11 @@ found:
   p->state = USED;
 
   // Allocate a trapframe page.
-  // if((p->trapframe = (struct trapframe *)kalloc()) == 0){
-  //   freeproc(p);
-  //   release(&p->lock);
-  //   return 0;
-  // }
+  if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
   struct thread *t;
   for (t = p->threads; t <= &p->threads[MAX_THREAD]; t++)
     if((t->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -377,7 +377,7 @@ userinit(void)
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
-  printf("4\n");
+  // printf("4\n");
   p->state = RUNNABLE;
   p->currenct_thread->state = THREAD_RUNNABLE;
 
@@ -426,18 +426,22 @@ fork(void)
   }
   np->sz = p->sz;
 
-  // // copy saved user registers.
-  // *(np->trapframe) = *(p->trapframe);
+  // copy saved user registers.
+  *(np->trapframe) = *(p->trapframe);
 
   struct thread *nt, *ot;
-  for (nt = np->threads, ot = p->threads; nt <= &np->threads[MAX_THREAD]; nt++, ot++) {
+  int j = 0;
+  for (nt = np->threads, ot = p->threads; nt < &np->threads[MAX_THREAD]; nt++, ot++) {
+    j++;
     *(nt) = *(ot);
     *(nt->trapframe) = *(ot->trapframe);
-    if (p->currenct_thread == ot)
+    if (p->currenct_thread == ot){
+      printf("j is here and = %d\n", j);
       np->currenct_thread = nt;
+    }
   }
 
-  np->trapframe = np->currenct_thread->trapframe;
+  // np->trapframe = np->currenct_thread->trapframe;
 
 
   // Cause fork to return 0 in the child.
@@ -459,15 +463,15 @@ fork(void)
   release(&wait_lock);
 
   acquire(&np->lock);
-  printf("3\n");
+  // printf("3\n");
   np->state = RUNNABLE;
-  printf("add :%p\n", (void *)(np->currenct_thread));
-  printf("current state = %d\n", np->currenct_thread->state);
+  // printf("add :%p\n", (void *)(np->currenct_thread));
+  // printf("current state = %d\n", np->currenct_thread->state);
   acquire(&np->currenct_thread->lock);
   np->currenct_thread->state = THREAD_RUNNABLE;
   release(&np->currenct_thread->lock);
   release(&np->lock);
-  printf("done with 3\n");
+  // printf("done with 3\n");
   return pid;
 }
 
@@ -746,7 +750,7 @@ sched(void)
 {
   int intena;
   struct proc *p = myproc();
-  printf("im here to make the job done %d\n", p->pid);
+  // printf("im here to make the job done %d\n", p->pid);
 
   if(!holding(&p->lock))
     panic("sched p->lock");
@@ -760,13 +764,13 @@ sched(void)
   if(intr_get())
     panic("sched interruptible");
 
-  printf("im here to get fucked 2\n");
+  // printf("im here to get fucked 2\n");
   intena = mycpu()->intena;
-  printf("im done getting fucked 2.5\n");
+  // printf("im done getting fucked 2.5\n");
   swtch(&p->context, &mycpu()->context);
   mycpu()->intena = intena;
-  printf("im done getting fucked 2\n");
-  printf("im done %d\n", p->pid);
+  // printf("im done getting fucked 2\n");
+  // printf("im done %d\n", p->pid);
 }
 
 // Give up the CPU for one scheduling round.

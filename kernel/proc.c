@@ -521,7 +521,7 @@ join_thread(int tid){
   struct thread *t;
   struct proc *p = myproc();
 
-  for (t = proc->threads; t < &proc->threads[MAX_THREAD]; t++)
+  for (t = p->threads; t < &p->threads[MAX_THREAD]; t++)
   {
     acquire(&p->lock);
     if(t->id == tid){
@@ -541,9 +541,37 @@ join_thread(int tid){
       }
     }
     release(&p->lock);
+    return 0;
   }
 
-  return 0;
+  return -1;
+}
+
+int 
+stop_thread(int tid){
+
+  struct thread *t;
+  struct proc *p = myproc();
+  for (t = p->threads; t < &p->threads[MAX_THREAD]; t++)
+  {
+    if (tid == -1){
+      if(t->state == RUNNING){
+        freethread(t);
+        return 0;
+      }else{
+        return -1;
+      }
+    }else if(t->id == tid){
+      if(t->state == RUNNING){
+        freethread(t);
+        return 0;
+      }else{
+        return -1;
+      }
+    }
+  }
+
+  return -1;
 }
 
 

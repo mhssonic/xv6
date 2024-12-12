@@ -141,16 +141,18 @@ uint64
 sys_join_thread(void)
 {
 
-  while(1);
+  int tid;
+  argint(0, &tid);
 
-  return 0;
+  return join_thread(tid);
 }
 
 uint64
-sys_exit_thread(void)
+sys_stop_thread(void)
 {
 
-  while (1);
+  int tid;
+  argint(0, &tid);
   
-  return 0;
+  return stop_thread;
 }

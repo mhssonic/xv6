@@ -28,8 +28,10 @@ struct spinlock tid_lock;
 
 
 extern void forkret(void);
+static void freethread(struct thread *t);
 static void freeproc(struct proc *p);
 void get_child_reverse(int, struct proc_info[], int*);
+static void freethread(struct thread *t);
 
 
 extern char trampoline[]; // trampoline.S
@@ -62,12 +64,16 @@ void
 procinit(void)
 {
   struct proc *p;
+  struct thread *t;
+  
   
   initlock(&pid_lock, "nextpid");
   initlock(&tid_lock, "nexttid");
   initlock(&wait_lock, "wait_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
+      for(t = proc->threads; t < &proc->threads[MAX_THREAD]; t++)
+           initlock(&t->lock, "thread");
       p->state = UNUSED;
       p->kstack = KSTACK((int) (p - proc));
   }
@@ -117,6 +123,20 @@ allocpid()
   return pid;
 }
 
+
+int
+alloctid()
+{
+  int tid;
+  
+  acquire(&tid_lock);
+  tid = nexttid;
+  nexttid = nexttid + 1;
+  release(&tid_lock);
+
+  return tid;
+}
+
 // Look in the process table for an UNUSED proc.
 // If found, initialize state required to run in the kernel,
 // and return with p->lock held.
@@ -146,6 +166,20 @@ found:
     release(&p->lock);
     return 0;
   }
+  struct thread *t;
+  for (t = p->threads; t < &p->threads[MAX_THREAD]; t++){
+    if((t->trapframe = (struct trapframe *)kalloc()) == 0){
+      freethread(t);
+      freeproc(p);
+      release(&p->lock);
+      return 0;
+    }
+    t->id = alloctid();
+  }
+  p->currenct_thread = p->threads;
+  p->trapframe = p->currenct_thread->trapframe;
+
+
 
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
@@ -164,18 +198,6 @@ found:
   return p;
 }
 
-int
-alloctid()
-{
-  int tid;
-  
-  acquire(&tid_lock);
-  tid = nexttid;
-  nexttid = nexttid + 1;
-  release(&tid_lock);
-
-  return tid;
-}
 
 static void
 freethread(struct thread *t)
@@ -183,23 +205,9 @@ freethread(struct thread *t)
   if(t->trapframe)
     kfree((void*)t->trapframe);
   t->trapframe = 0;
-
-  //TODO
-  // if(p->pagetable)
-  //   proc_freepagetable(p->pagetable, p->sz);
-  // p->pagetable = 0;
-  // p->sz = 0;
-  // p->pid = 0;
-  // p->parent = 0;
-  // p->name[0] = 0;
-  // p->chan = 0;
-  // p->killed = 0;
-  // p->xstate = 0;
-  // p->state = UNUSED;
-
   t->id = 0;
   t->state = THREAD_FREE;
-  t->join = 0; // zero is correct???
+  t->join = 0; 
 }
 
 static struct thread*
@@ -268,9 +276,10 @@ found:
 static void
 freeproc(struct proc *p)
 {
-  if(p->trapframe)
-    kfree((void*)p->trapframe);
   p->trapframe = 0;
+  struct thread *t;
+  for(t = p->threads; t < &p->threads[MAX_THREAD]; t++)
+    freethread(t);
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
@@ -361,8 +370,9 @@ userinit(void)
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
-
+  // printf("4\n");
   p->state = RUNNABLE;
+  p->currenct_thread->state = THREAD_RUNNABLE;
 
   release(&p->lock);
 }
@@ -412,6 +422,18 @@ fork(void)
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
 
+  struct thread *nt, *ot;
+  for (nt = np->threads, ot = p->threads; nt < &np->threads[MAX_THREAD]; nt++, ot++) {
+    //TODO its wrong and broken
+    nt->join = ot->join;
+    nt->state = ot->state;
+    *(nt->trapframe) = *(ot->trapframe);
+    if (p->currenct_thread == ot)
+      np->currenct_thread = nt;
+  }
+  np->trapframe = np->currenct_thread->trapframe;
+
+
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
 
@@ -424,7 +446,6 @@ fork(void)
   safestrcpy(np->name, p->name, sizeof(p->name));
 
   pid = np->pid;
-
   release(&np->lock);
 
   acquire(&wait_lock);
@@ -432,9 +453,15 @@ fork(void)
   release(&wait_lock);
 
   acquire(&np->lock);
+  // printf("3\n");
   np->state = RUNNABLE;
+  // printf("add :%p\n", (void *)(np->currenct_thread));
+  // printf("current state = %d\n", np->currenct_thread->state);
+  acquire(&np->currenct_thread->lock);
+  np->currenct_thread->state = THREAD_RUNNABLE;
+  release(&np->currenct_thread->lock);
   release(&np->lock);
-
+  // printf("done with 3\n");
   return pid;
 }
 
@@ -476,6 +503,66 @@ create_thread(void (*start_routine)(void*), void *arg)
 
   return tid;
 }
+
+int 
+join_thread(int tid){
+
+  struct thread *t;
+  struct proc *p = myproc();
+
+  for (t = p->threads; t < &p->threads[MAX_THREAD]; t++)
+  {
+    acquire(&p->lock);
+    if(t->id == tid){
+      while(1){
+        if(t->state == THREAD_JOIN){
+          p->state = RUNNABLE;
+          freethread(t);
+          release(&p->lock);
+          break;
+        }else if(t->state == THREAD_RUNNING || t->state == THREAD_RUNNABLE){
+          p->state = SLEEPING;
+          t->join = 1;
+          release(&p->lock);
+          yield();
+          
+        }
+      }
+    }
+    release(&p->lock);
+    return 0;
+  }
+
+  return -1;
+}
+
+int 
+stop_thread(int tid){
+
+  struct thread *t;
+  struct proc *p = myproc();
+  for (t = p->threads; t < &p->threads[MAX_THREAD]; t++)
+  {
+    if (tid == -1){
+      if(t->state == RUNNING){
+        freethread(t);
+        return 0;
+      }else{
+        return -1;
+      }
+    }else if(t->id == tid){
+      if(t->state == RUNNING){
+        freethread(t);
+        return 0;
+      }else{
+        return -1;
+      }
+    }
+  }
+
+  return -1;
+}
+
 
 // Pass p's abandoned children to init.
 // Caller must hold wait_lock.
@@ -526,9 +613,11 @@ exit(int status)
   wakeup(p->parent);
   
   acquire(&p->lock);
+  acquire(&p->currenct_thread->lock);
 
   p->xstate = status;
   p->state = ZOMBIE;
+  p->currenct_thread->state = THREAD_FREE;
 
   release(&wait_lock);
 
@@ -545,6 +634,7 @@ wait(uint64 addr)
   struct proc *pp;
   int havekids, pid;
   struct proc *p = myproc();
+  struct thread *pt;
 
   acquire(&wait_lock);
 
@@ -566,6 +656,8 @@ wait(uint64 addr)
             release(&wait_lock);
             return -1;
           }
+          for(pt = pp->threads; pt < &pp->threads[MAX_THREAD]; pt++)
+            freethread(pt);
           freeproc(pp);
           release(&pp->lock);
           release(&wait_lock);
@@ -595,6 +687,63 @@ wait(uint64 addr)
 //    via swtch back to the scheduler.
 void
 scheduler(void)
+{
+  struct proc *p;
+  struct thread *t;
+  // struct thread *j;
+  struct cpu *c = mycpu();
+
+  c->proc = 0;
+  for(;;){
+    // The most recent process to run may have had interrupts
+    // turned off; enable them to avoid a deadlock if all
+    // processes are waiting.
+    intr_on();
+
+    int found = 0;
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state == RUNNABLE) {
+        for(t = p->threads; t < &p->threads[MAX_THREAD]; t++) {
+          // printf("trying to run a thread\n");
+          acquire(&t->lock);
+
+          if(t->state == THREAD_RUNNABLE) {
+            // Switch to chosen process.  It is the process's job
+            // to release its lock and then reacquire it
+            // before jumping back to us.
+            p->state = RUNNING;
+            t->state = THREAD_RUNNING;
+            c->proc = p;
+            p->currenct_thread = t;
+            // p->trapframe = t->trapframe;
+            swtch(&c->context, &p->context);
+
+            // Process is done running for now.
+            // It should have changed its p->state before coming back.
+            c->proc = 0;
+            found = 1;
+          }
+          release(&t->lock);
+        }
+      }
+      release(&p->lock);
+    }
+    if(found == 0) {
+      // nothing to run; stop running on this core until an interrupt.
+      // printf("nothing found\n");
+      // printf("proccess %d state: %d\n", p->pid, p->state);
+      // for(j = proc->threads; j < &proc->threads[MAX_THREAD]; j++)
+      //   printf("first try thread is %d\n", j->state);
+      // printf("--------\n");
+      intr_on();
+      asm volatile("wfi");
+    }
+  }
+}
+
+void
+scheduler2(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
@@ -644,19 +793,27 @@ sched(void)
 {
   int intena;
   struct proc *p = myproc();
+  // printf("im here to make the job done %d\n", p->pid);
 
   if(!holding(&p->lock))
     panic("sched p->lock");
-  if(mycpu()->noff != 1)
+  //TODO lock this shit
+  if(!holding(&p->currenct_thread->lock))
+    panic("sched currenct_thread->lock");
+  if(mycpu()->noff != 2)
     panic("sched locks");
   if(p->state == RUNNING)
     panic("sched running");
   if(intr_get())
     panic("sched interruptible");
 
+  // printf("im here to get fucked 2\n");
   intena = mycpu()->intena;
+  // printf("im done getting fucked 2.5\n");
   swtch(&p->context, &mycpu()->context);
   mycpu()->intena = intena;
+  // printf("im done getting fucked 2\n");
+  // printf("im done %d\n", p->pid);
 }
 
 // Give up the CPU for one scheduling round.
@@ -665,8 +822,12 @@ yield(void)
 {
   struct proc *p = myproc();
   acquire(&p->lock);
+  acquire(&p->currenct_thread->lock);
+  // printf("2\n");
   p->state = RUNNABLE;
+  p->currenct_thread->state = THREAD_RUNNABLE;
   sched();
+  release(&p->currenct_thread->lock);
   release(&p->lock);
 }
 
@@ -678,6 +839,7 @@ forkret(void)
   static int first = 1;
 
   // Still holding p->lock from scheduler.
+  release(&myproc()->currenct_thread->lock);
   release(&myproc()->lock);
 
   if (first) {
@@ -709,11 +871,13 @@ sleep(void *chan, struct spinlock *lk)
   // so it's okay to release lk.
 
   acquire(&p->lock);  //DOC: sleeplock1
+  acquire(&p->currenct_thread->lock);
   release(lk);
 
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
+  p->currenct_thread->state = THREAD_RUNNABLE;
 
   sched();
 
@@ -721,6 +885,7 @@ sleep(void *chan, struct spinlock *lk)
   p->chan = 0;
 
   // Reacquire original lock.
+  release(&p->currenct_thread->lock);
   release(&p->lock);
   acquire(lk);
 }
@@ -735,8 +900,10 @@ wakeup(void *chan)
   for(p = proc; p < &proc[NPROC]; p++) {
     if(p != myproc()){
       acquire(&p->lock);
+      //TODO lock
       if(p->state == SLEEPING && p->chan == chan) {
         p->state = RUNNABLE;
+        p->currenct_thread->state = THREAD_RUNNABLE;
       }
       release(&p->lock);
     }
@@ -757,7 +924,9 @@ kill(int pid)
       p->killed = 1;
       if(p->state == SLEEPING){
         // Wake process from sleep().
+        printf("1\n");
         p->state = RUNNABLE;
+        p->currenct_thread->state = THREAD_RUNNABLE;
       }
       release(&p->lock);
       return 0;

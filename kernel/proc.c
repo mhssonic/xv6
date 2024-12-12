@@ -544,14 +544,14 @@ stop_thread(int tid){
   for (t = p->threads; t < &p->threads[MAX_THREAD]; t++)
   {
     if (tid == -1){
-      if(t->state == RUNNING){
+      if(t->state == THREAD_RUNNING){
         freethread(t);
         return 0;
       }else{
         return -1;
       }
     }else if(t->id == tid){
-      if(t->state == RUNNING){
+      if(t->state == THREAD_RUNNING){
         freethread(t);
         return 0;
       }else{

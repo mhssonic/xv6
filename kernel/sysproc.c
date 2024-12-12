@@ -154,5 +154,5 @@ sys_stop_thread(void)
   int tid;
   argint(0, &tid);
   
-  return stop_thread;
+  return stop_thread(tid);
 }

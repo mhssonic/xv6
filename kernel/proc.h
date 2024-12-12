@@ -102,7 +102,8 @@ struct proc {
   uint64 sz;                   // Size of process memory (bytes)
   pagetable_t pagetable;       // User page table
   struct thread threads[MAX_THREAD];
-  struct thread *crurent_thread;
+  struct thread *currenct_thread;
+  // struct thread *init_thread;
   struct trapframe *trapframe; // data page for trampoline.S
   struct context context;      // swtch() here to run process
   struct file *ofile[NOFILE];  // Open files

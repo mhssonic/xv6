@@ -155,4 +155,4 @@ sys_stop_thread(void)
   argint(0, &tid);
   
   return stop_thread(tid);
-}
+} 

@@ -9,6 +9,7 @@ struct sleeplock;
 struct stat;
 struct superblock;
 struct report_traps;
+struct trapframe;
 #include "user/repstruct.h"
 
 
@@ -91,6 +92,10 @@ void            printfinit(void);
 int             cpuid(void);
 void            exit(int);
 int             fork(void);
+int             create_tread(void (*start_routine)(void*), void *arg);
+int             join_thread(int tid);
+int             join_thread(int tid);
+int             stop_thread(int tid);
 int             growproc(int);
 void            proc_mapstacks(pagetable_t);
 pagetable_t     proc_pagetable(struct proc *);

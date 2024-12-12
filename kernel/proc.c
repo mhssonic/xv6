@@ -515,6 +515,38 @@ create_thread(void (*start_routine)(void*), void *arg)
   return tid;
 }
 
+int 
+join_thread(int tid){
+
+  struct thread *t;
+  struct proc *p = myproc();
+
+  for (t = proc->threads; t < &proc->threads[MAX_THREAD]; t++)
+  {
+    acquire(&p->lock);
+    if(t->id == tid){
+      while(1){
+        if(t->state == THREAD_JOIN){
+          p->state = RUNNABLE;
+          freethread(t);
+          release(&p->lock);
+          break;
+        }else if(t->state == THREAD_RUNNING || t->state == THREAD_RUNNABLE){
+          p->state = SLEEPING;
+          t->join = 1;
+          release(&p->lock);
+          yield();
+          
+        }
+      }
+    }
+    release(&p->lock);
+  }
+
+  return 0;
+}
+
+
 // Pass p's abandoned children to init.
 // Caller must hold wait_lock.
 void

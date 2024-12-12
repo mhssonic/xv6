@@ -40,4 +40,4 @@ entry("get_child");
 entry("get_log");
 entry("create_thread");
 entry("join_thread");
-entry("exit_thread");
+entry("stop_thread");

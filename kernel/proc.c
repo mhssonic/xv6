@@ -215,30 +215,34 @@ freethread(struct thread *t)
 static struct thread*
 allocthread(void)
 {
+  printf("21.1\n");
   struct thread *t;
   struct proc *p = myproc();
   
   for(t = p->threads; t < &p->threads[MAX_THREAD]; t++) {
+    printf("22.3\n");
     acquire(&p->lock);
+    printf("%d\n" , t->state);
     if(t->state == THREAD_FREE) {
+      printf("22.4");
       goto found;
     } else {
       release(&p->lock); 
     }
   }
   return 0;
-
+  
 found:
   t->id = alloctid();
   t->state = THREAD_RUNNABLE;
-
+  printf("22.5");
   // Allocate a trapframe page.
   if((t->trapframe = (struct trapframe *)kalloc()) == 0){
     freethread(t);
     release(&p->lock);
     return 0;
   }
-
+  printf("22.9");
   return t;
 }
 
@@ -454,8 +458,9 @@ create_thread(void *(*start_routine)(void*), void *arg)
   if((nt = allocthread()) == 0){
     return -1;
   }
+  printf("21");
   memmove(nt->trapframe, p->trapframe, sizeof (struct trapframe));
-
+  printf("22");
   // copy saved user registers.
   // *(nt->trapframe) = *(p->trapframe);
 
@@ -717,10 +722,10 @@ scheduler(void)
             p->trapframe = t->trapframe;
             swtch(&c->context, &p->context);
             if (p->pid == 3){
-              printf("state of proccess is %d with pid %d, %ld\n", p->state, p->pid, p->currenct_thread->trapframe->epc);
-              printf("more informaiton %ld, %ld \n", p->trapframe->kernel_sp, p->trapframe->sp);
+             // printf("state of proccess is %d with pid %d, %ld\n", p->state, p->pid, p->currenct_thread->trapframe->epc);
+              //printf("more informaiton %ld, %ld \n", p->trapframe->kernel_sp, p->trapframe->sp);
               for(j = p->threads; j < &p->threads[MAX_THREAD]; j++){
-                printf("state of thread is %d with tid %d, %d\n", j->state, j->id, p->currenct_thread->id);
+                //printf("state of thread is %d with tid %d, %d\n", j->state, j->id, p->currenct_thread->id);
               }
             }
 

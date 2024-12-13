@@ -53,7 +53,9 @@ int main(int argc, char *argv[]) {
     int tb = create_thread(&god, (void *)&b);
     int tc = create_thread(&god, (void *)&c);
 
-    sleep(10);
+    while(1);
+    
+    //sleep(10);
     
 
     join_thread(ta);

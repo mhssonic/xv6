@@ -2,7 +2,7 @@
 #include "thread.h"
 // Saved registers for kernel context switches.
 #define NULL ((void *)0)
-#define MAX_THREAD 4
+#define MAX_THREAD 1
 struct context {
   uint64 ra;
   uint64 sp;

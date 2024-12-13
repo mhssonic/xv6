@@ -25,6 +25,8 @@ void* my_thread(void *arg) {
 
 void god(void *arg) {
     printf("im here you mother fuckers\n");
+   
+
     int *number = arg;
     printf("number is %d, %p\n", *number, number);
     // for (int i = 0; i < 100; ++i) {

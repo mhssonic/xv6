@@ -6,7 +6,7 @@
 
 volatile int a = 0, b = 0, c = 0;
 
-void* my_thread(void *arg) {
+void *my_thread(void *arg) {
     printf("im here you mother fuckers\n");
     int *number = arg;
     for (int i = 0; i < 100; ++i) {
@@ -53,7 +53,8 @@ int main(int argc, char *argv[]) {
     int tb = create_thread(&god, (void *)&b);
     int tc = create_thread(&god, (void *)&c);
 
-    sleep(10);
+    while(1);
+    // sleep(10);
     
 
     join_thread(ta);

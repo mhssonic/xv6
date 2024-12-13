@@ -438,20 +438,17 @@ fork(void)
 }
 
 int
-create_thread(void *(*start_routine)(void*), void *arg)
+create_thread(void (*start_routine)(void *), void *arg)
 {
   int tid;
   struct thread *nt;
   struct proc *p = myproc();
   uint64 stack_top;
-  printf("im here yo\n");
-  /*
-  if((nt = allocthread()) == 0){
-    printf("hadi");
-  }
-  */
+  printf("pid %d, tid %d\n", p->pid, p->currenct_thread->id);
+
   // Allocate thread.
   if((nt = allocthread()) == 0){
+    printf("im a filed create_thread\n");
     return -1;
   }
   memmove(nt->trapframe, p->trapframe, sizeof (struct trapframe));
@@ -473,8 +470,8 @@ create_thread(void *(*start_routine)(void*), void *arg)
       panic("stack alloc failed");
       return -1;
   }
+  
   p->sz += TREADSZ;
-
 
   nt->trapframe->sp = (uint64)stack_top; // Top of stack
   // nt->trapframe->kernel_sp = (uint64)kstack;
@@ -495,7 +492,6 @@ create_thread(void *(*start_routine)(void*), void *arg)
   for(t = p->threads; t < &p->threads[MAX_THREAD]; t++){
     printf("state of thread is %d with tid %d\n", t->state, t->id);
   }
-
   release(&p->lock);
   return tid;
 }
@@ -717,10 +713,10 @@ scheduler(void)
             p->trapframe = t->trapframe;
             swtch(&c->context, &p->context);
             if (p->pid == 3){
-              printf("state of proccess is %d with pid %d, %ld\n", p->state, p->pid, p->currenct_thread->trapframe->epc);
-              printf("more informaiton %ld, %ld \n", p->trapframe->kernel_sp, p->trapframe->sp);
+              // printf("state of proccess is %d with pid %d, %ld\n", p->state, p->pid, p->trapframe->epc);
+              // printf("more informaiton %ld, %ld \n", p->trapframe->kernel_sp, p->trapframe->sp);
               for(j = p->threads; j < &p->threads[MAX_THREAD]; j++){
-                printf("state of thread is %d with tid %d, %d\n", j->state, j->id, p->currenct_thread->id);
+                // printf("state of thread is %d with tid %d, %d\n", j->state, j->id, p->currenct_thread->id);
               }
             }
 
@@ -783,6 +779,14 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   acquire(&p->currenct_thread->lock);
+  // struct thread *j;
+  // if (p->pid == 3){
+  //   printf("end state of proccess is %d with pid %d, %ld\n", p->state, p->pid, p->trapframe->epc);
+  //   printf("more informaiton %ld, %ld \n", p->trapframe->kernel_sp, p->trapframe->sp);
+  //   for(j = p->threads; j < &p->threads[MAX_THREAD]; j++){
+  //     printf("state of thread is %d with tid %d, %d\n", j->state, j->id, p->currenct_thread->id);
+  //   }
+  // }
   p->state = RUNNABLE;
   p->currenct_thread->state = THREAD_RUNNABLE;
   sched();

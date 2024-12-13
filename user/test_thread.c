@@ -4,7 +4,7 @@
 
 
 
-volatile int a = 0, b = 0, c = 0;
+volatile int a = 2, b = 0, c = 0;
 
 void* my_thread(void *arg) {
     printf("im here you mother fuckers\n");
@@ -25,7 +25,8 @@ void* my_thread(void *arg) {
 
 void god(void *arg) {
     printf("im here you mother fuckers\n");
-    // int *number = arg;
+    int *number = arg;
+    printf("number is %d, %p\n", *number, number);
     // for (int i = 0; i < 100; ++i) {
     //     (*number)++;
 
@@ -53,8 +54,7 @@ int main(int argc, char *argv[]) {
     int tb = create_thread(&god, (void *)&b);
     int tc = create_thread(&god, (void *)&c);
 
-    sleep(10);
-    
+    // sleep(100);
 
     join_thread(ta);
     join_thread(tb);

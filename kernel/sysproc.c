@@ -133,6 +133,11 @@ sys_create_thread(void)
 
     argaddr(0 , (uint64 *)&func);
     argaddr(1 , (uint64 *)&arg);
+
+    // if (copyout(myproc()->pagetable, uaddr, (char *)&arg, sizeof(result)) < 0) {
+    //   return -1;  // Error if copy fails
+    // }
+
     return create_thread(func, arg);
 }
 

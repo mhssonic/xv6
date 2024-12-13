@@ -41,6 +41,7 @@ extern char trampoline[]; // trampoline.S
 // memory model when using p->parent.
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
+struct spinlock join_lock;
 
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
@@ -70,6 +71,7 @@ procinit(void)
   initlock(&pid_lock, "nextpid");
   initlock(&tid_lock, "nexttid");
   initlock(&wait_lock, "wait_lock");
+  initlock(&join_lock, "join_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
       for(t = p->threads; t < &p->threads[MAX_THREAD]; t++)
@@ -161,11 +163,11 @@ found:
   p->state = USED;
 
   // // Allocate a trapframe page.
-  // if((p->trapframe = (struct trapframe *)kalloc()) == 0){
-  //   freeproc(p);
-  //   release(&p->lock);
-  //   return 0;
-  // }
+  if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
   struct thread *t;
   for (t = p->threads; t < &p->threads[MAX_THREAD]; t++){
     if((t->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -403,7 +405,7 @@ fork(void)
     if (p->currenct_thread == ot)
       np->currenct_thread = nt;
   }
-  np->trapframe = np->currenct_thread->trapframe;
+  // np->trapframe = np->currenct_thread->trapframe;
 
 
   // Cause fork to return 0 in the child.
@@ -489,12 +491,12 @@ create_thread(void *(*start_routine)(void*), void *arg)
   //TODO add it for extra point
   // nt->trapframe->kernel_hartid = r_tp();
 
-  struct thread *t;
-  printf("input are %p, %p\n", start_routine, arg);
-  printf("state of proccess is %d with pid %d\n", p->state, p->pid);
-  for(t = p->threads; t < &p->threads[MAX_THREAD]; t++){
-    printf("state of thread is %d with tid %d\n", t->state, t->id);
-  }
+  // struct thread *t;
+  // printf("input are %p, %p\n", start_routine, arg);
+  // printf("state of proccess is %d with pid %d\n", p->state, p->pid);
+  // for(t = p->threads; t < &p->threads[MAX_THREAD]; t++){
+  //   printf("state of thread is %d with tid %d\n", t->state, t->id);
+  // }
 
   release(&p->lock);
   return tid;
@@ -514,17 +516,22 @@ join_thread(int tid){
       acquire(&t->lock);
       while(1){
         if(t->state == THREAD_JOIN){
+          p = myproc();
           p->state = RUNNABLE;
           freethread(t);
           release(&t->lock);
           release(&p->lock);
           return 0;
         }else if(t->state == THREAD_RUNNING || t->state == THREAD_RUNNABLE){
-          t->join = 0;
+          p = myproc();
+          p->currenct_thread->join = tid;
+          p->currenct_thread->state = THREAD_WAIT;
+          p->state = RUNNABLE;
+
           release(&t->lock);
-          release(&p->lock);
-          yield();
-          acquire(&p->lock);
+          acquire(&p->currenct_thread->lock);
+          sched();
+          release(&p->currenct_thread->lock);
           acquire(&t->lock);
         }
       }
@@ -714,10 +721,11 @@ scheduler(void)
             t->state = THREAD_RUNNING;
             c->proc = p;
             p->currenct_thread = t;
-            p->trapframe = t->trapframe;
+            memmove(p->trapframe,t->trapframe,sizeof (struct trapframe));
             swtch(&c->context, &p->context);
+            memmove(t->trapframe,p->trapframe,sizeof (struct trapframe));
             if (p->pid == 3){
-              printf("state of proccess is %d with pid %d, %ld\n", p->state, p->pid, p->currenct_thread->trapframe->epc);
+              printf("state of proccess is %d with pid %d, %ld\n", p->state, p->pid, p->trapframe->epc);
               printf("more informaiton %ld, %ld \n", p->trapframe->kernel_sp, p->trapframe->sp);
               for(j = p->threads; j < &p->threads[MAX_THREAD]; j++){
                 printf("state of thread is %d with tid %d, %d\n", j->state, j->id, p->currenct_thread->id);
@@ -735,6 +743,7 @@ scheduler(void)
       release(&p->lock);
     }
     if(found == 0) {
+      // printf("nothing have found");
       intr_on();
       asm volatile("wfi");
     }

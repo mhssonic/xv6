@@ -46,22 +46,22 @@ void god(void *arg) {
 
 int main(int argc, char *argv[]) {
     if (argc == 42) my_thread(0);
-    printf("%p \n", (void *)((volatile void *)&my_thread));
-    printf("%p \n", (void *)((volatile void *)my_thread));
-    printf("%p \n", (void *)((volatile void *)&god));
-    printf("%p \n", (void *)((volatile void *)god));
+    // printf("%p \n", (void *)((volatile void *)&my_thread));
+    // printf("%p \n", (void *)((volatile void *)my_thread));
+    // printf("%p \n", (void *)((volatile void *)&god));
+    // printf("%p \n", (void *)((volatile void *)god));
 
     // sleep(300);
     int ta = create_thread(&god, (void *)&a);
-    // int tb = create_thread(&god, (void *)&b);
-    // int tc = create_thread(&god, (void *)&c);
+    int tb = create_thread(&god, (void *)&b);
+    int tc = create_thread(&god, (void *)&c);
 
     // sleep(100);
 
     join_thread(ta);
     printf("im here you mf\n");
-    // join_thread(tb);
-    // join_thread(tc);
+    join_thread(tb);
+    join_thread(tc);
     // sleep(10);
     exit(0);
 }

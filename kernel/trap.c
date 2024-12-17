@@ -68,7 +68,6 @@ usertrap(void)
   } else if((which_dev = devintr()) != 0){
     // ok
   } else if (r_scause() == 12 && p->trapframe->ra == -1){
-    printf("trap user handel\n");
     if (stop_thread(-1)){
       printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
       printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
@@ -76,7 +75,6 @@ usertrap(void)
       setkilled(p);
     } else{
       usertrapret();
-      // panic("wtf im here");
       return;
     }
   } else {

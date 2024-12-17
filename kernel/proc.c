@@ -812,6 +812,8 @@ scheduler(void)
             p->state = RUNNING;
             t->state = THREAD_RUNNING;
             c->proc = p;
+            if (p->currenct_thread->state != THREAD_FREE)
+              memmove(p->currenct_thread->trapframe,p->trapframe,sizeof (struct trapframe));
             p->currenct_thread = t;
             // if (p->currenct_thread->id == 13)
             //   printf("---------------------------------------------------------------------------------------------------------------------\n");
@@ -824,8 +826,6 @@ scheduler(void)
               }
               lastct = 1;
             }
-            if (p->currenct_thread->state != THREAD_FREE)
-              memmove(p->currenct_thread->trapframe,p->trapframe,sizeof (struct trapframe));
             memmove(p->trapframe,t->trapframe,sizeof (struct trapframe));
             swtch(&c->context, &p->context);
             if (t->state != THREAD_FREE)

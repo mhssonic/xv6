@@ -67,6 +67,18 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
+  } else if (r_scause() == 12 && p->trapframe->ra == -1){
+    printf("trap user handel\n");
+    if (stop_thread(-1)){
+      printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
+      printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
+      log_trap(p, r_scause(), r_sepc(), r_stval());
+      setkilled(p);
+    } else{
+      usertrapret();
+      // panic("wtf im here");
+      return;
+    }
   } else {
     printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
     printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
@@ -127,7 +139,6 @@ usertrapret(void)
   // and switches to user mode with sret.
   uint64 trampoline_userret = TRAMPOLINE + (userret - trampoline);
   ((void (*)(uint64))trampoline_userret)(satp);
-  printf("im done fucking here 2\n");
 }
 
 // interrupts and exceptions from kernel code go here via kernelvec,
@@ -153,7 +164,7 @@ kerneltrap()
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2 && myproc() != 0){
-    printf("im here to wtf\n");
+    // printf("im here to wtf\n");
     yield();
   }
 

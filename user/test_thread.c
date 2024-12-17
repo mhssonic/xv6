@@ -53,14 +53,15 @@ int main(int argc, char *argv[]) {
 
     // sleep(300);
     int ta = create_thread(&god, (void *)&a);
-    int tb = create_thread(&god, (void *)&b);
-    int tc = create_thread(&god, (void *)&c);
+    // int tb = create_thread(&god, (void *)&b);
+    // int tc = create_thread(&god, (void *)&c);
 
     // sleep(100);
 
     join_thread(ta);
-    join_thread(tb);
-    join_thread(tc);
-
+    printf("im here you mf\n");
+    // join_thread(tb);
+    // join_thread(tc);
+    // sleep(10);
     exit(0);
 }

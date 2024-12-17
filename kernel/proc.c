@@ -181,7 +181,7 @@ found:
     t->id = alloctid();
   }
   p->currenct_thread = p->threads;
-  p->trapframe = p->currenct_thread->trapframe;
+  // p->trapframe = p->currenct_thread->trapframe;
 
 
 
@@ -206,9 +206,7 @@ found:
 static void
 freethread(struct thread *t)
 {
-  if(t->trapframe)
-    kfree((void*)t->trapframe);
-  t->trapframe = 0;
+  memset(t->trapframe, 0, sizeof(t->trapframe));
   t->id = 0;
   t->state = THREAD_FREE;
   t->join = 0; 
@@ -446,7 +444,7 @@ create_thread(void *(*start_routine)(void*), void *arg)
   struct thread *nt;
   struct proc *p = myproc();
   uint64 stack_top;
-  printf("im here yo\n");
+  // printf("im here yo\n");
   /*
   if((nt = allocthread()) == 0){
     printf("hadi");
@@ -518,6 +516,7 @@ join_thread(int tid){
       while(1){
         // acquire(&t->lock);
         if(t->state == THREAD_JOIN){
+          printf("im here wtf should i do \n");
           p = myproc();
           acquire(&p->lock);
           p->state = RUNNABLE;
@@ -535,10 +534,18 @@ join_thread(int tid){
 
           // release(&t->lock);
           acquire(&ct->lock);
+          printf("I going in %d %d\n", p->currenct_thread->id, p->currenct_thread->state);
           sched();
           release(&p->currenct_thread->lock);
           release(&p->lock);
-          // release(&ct->lock);
+          printf("I got out of here dude %d %d\n", p->currenct_thread->id, p->currenct_thread->state);
+          printf("ffffffffffffffffffffffffffffffffffffffffffffffff\n");
+          struct thread *j;
+          printf("state of proccess is %d with pid %d, %ld\n", p->state, p->pid, p->trapframe->epc);
+          printf("more informaiton %ld, %ld \n", p->trapframe->kernel_sp, p->trapframe->sp);
+          for(j = p->threads; j < &p->threads[MAX_THREAD]; j++){
+            printf("state of thread is %d with tid %d, %ld|, %d\n", j->state, j->id, j->trapframe->epc, p->currenct_thread->id);
+          }
           return 0;
         }
       }
@@ -550,29 +557,99 @@ join_thread(int tid){
 
 int 
 stop_thread(int tid){
-
-  struct thread *t;
+  struct thread *t, *ct = 0;
   struct proc *p = myproc();
-  for (t = p->threads; t < &p->threads[MAX_THREAD]; t++)
-  {
-    if (tid == -1){
-      if(t->state == THREAD_RUNNING){
-        freethread(t);
-        return 0;
-      }else{
-        return -1;
+  acquire(&p->lock);
+  if (tid == -1){
+    if(p->currenct_thread->state == THREAD_RUNNING){
+        acquire(&p->currenct_thread->lock);
+        ct = p->currenct_thread;
+    }else{
+      release(&p->lock);
+      return -1;
+    }
+  }else{
+    for (t = p->threads; t < &p->threads[MAX_THREAD]; t++){
+        if(t->id == tid){
+          if(t->state == THREAD_RUNNING){
+            acquire(&t->lock);
+            ct = t;
+          }else{
+            release(&p->lock);
+            return -1;
+          }
+        }
       }
-    }else if(t->id == tid){
-      if(t->state == THREAD_RUNNING){
-        freethread(t);
-        return 0;
-      }else{
-        return -1;
-      }
+    if (ct == 0){
+      release(&p->lock);
+      return -1;
     }
   }
+  uint64 old_ra = 0, old_sp = 0;
+  printf("going into for\n");
+  for (t = p->threads; t < &p->threads[MAX_THREAD]; t++){
+    if (t->id != ct->id){
+      // printf("im holding %d %d %d %d\n", holding(&t->lock), t->id, t->join, ct->id);
+      acquire(&t->lock);
+      if(t->state == THREAD_WAIT && t->join == ct->id){
+        t->state = THREAD_RUNNABLE;
+        t->join = 0;
+        release(&t->lock);
+        printf("ct tid: %d\n", ct->id);
+        if (ct->state == THREAD_RUNNING){
+          freethread(ct);
+          if (p->state == RUNNING)
+            p->state = RUNNABLE;
+          printf("currect tid: %d\n", p->currenct_thread->id);
+          // old_ra = mycpu()->context.ra;
+          // old_sp = mycpu()->context.sp;
+          printf("context: %ld, %ld\n", old_ra, old_sp);
+          // memset(&p->context, 0, sizeof(p->context));
+          // mycpu()->context.ra = old_ra;
+          // mycpu()->context.sp = old_sp;
+          sched();
+          printf("========================================\n");
+          struct thread *j;
+          printf("state of proccess is %d with pid %d, %ld\n", p->state, p->pid, p->trapframe->epc);
+          printf("state of proccess is %d with pid %d, %ld\n", p->state, p->pid, p->currenct_thread->trapframe->epc);
+          printf("more informaiton %ld, %ld \n", p->trapframe->kernel_sp, p->trapframe->sp);
+          for(j = p->threads; j < &p->threads[MAX_THREAD]; j++){
+            printf("state of thread is %d with tid %d, %d\n", j->state, j->id, p->currenct_thread->id);
+          }
 
-  return -1;
+
+
+          release(&p->currenct_thread->lock);
+          release(&p->lock);
+        } else{
+          ct->state = THREAD_JOIN;
+          release(&ct->lock);
+        }
+        return 0;
+      }
+      release(&t->lock);
+    }
+  }
+  if (ct->state == THREAD_RUNNING){
+    ct->state = THREAD_JOIN;
+    p->state = RUNNABLE;
+    sched();
+    release(&p->currenct_thread->lock);
+  } else{
+    ct->state = THREAD_JOIN;
+    release(&ct->lock);
+  }
+  printf("++++++++++++++++++++++++++++++++++++\n");
+  struct thread *j;
+  printf("state of proccess is %d with pid %d, %ld\n", p->state, p->pid, p->trapframe->epc);
+  printf("more informaiton %ld, %ld \n", p->trapframe->kernel_sp, p->trapframe->sp);
+  for(j = p->threads; j < &p->threads[MAX_THREAD]; j++){
+    printf("state of thread is %d with tid %d, %d\n", j->state, j->id, p->currenct_thread->id);
+  }
+
+  
+  release(&p->lock);
+  return 0;
 }
 
 
@@ -597,6 +674,7 @@ reparent(struct proc *p)
 void
 exit(int status)
 {
+  printf("im here to end proccess \n");
   struct proc *p = myproc();
 
   if(p == initproc)
@@ -704,6 +782,7 @@ scheduler(void)
   struct thread *t;
   struct thread *j;
   struct cpu *c = mycpu();
+  int lastct = 0;
 
   c->proc = 0;
   for(;;){
@@ -734,20 +813,33 @@ scheduler(void)
             t->state = THREAD_RUNNING;
             c->proc = p;
             p->currenct_thread = t;
-            if (p->currenct_thread->id == 13)
-              printf("---------------------------------------------------------------------------------------------------------------------\n");
-
-            memmove(p->trapframe,t->trapframe,sizeof (struct trapframe));
-            swtch(&c->context, &p->context);
-            memmove(t->trapframe,p->trapframe,sizeof (struct trapframe));
-            if (p->pid == 3){
+            // if (p->currenct_thread->id == 13)
+            //   printf("---------------------------------------------------------------------------------------------------------------------\n");
+            if(p->pid == 3){
+              printf("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
               printf("state of proccess is %d with pid %d, %ld\n", p->state, p->pid, p->trapframe->epc);
               printf("more informaiton %ld, %ld \n", p->trapframe->kernel_sp, p->trapframe->sp);
               for(j = p->threads; j < &p->threads[MAX_THREAD]; j++){
-                printf("state of thread is %d with tid %d, %d\n", j->state, j->id, p->currenct_thread->id);
+                printf("state of thread is %d with tid %d, %ld|, %d\n", j->state, j->id, j->trapframe->epc, p->currenct_thread->id);
               }
-              if (p->currenct_thread->id == 13)
-                printf("---------------------------------------------------------------------------------------------------------------------\n");
+              lastct = 1;
+            }
+            if (p->currenct_thread->state != THREAD_FREE)
+              memmove(p->currenct_thread->trapframe,p->trapframe,sizeof (struct trapframe));
+            memmove(p->trapframe,t->trapframe,sizeof (struct trapframe));
+            swtch(&c->context, &p->context);
+            if (t->state != THREAD_FREE)
+              memmove(t->trapframe,p->trapframe,sizeof (struct trapframe));
+            if (p->pid == 3 || lastct){
+              printf("********************************************\n");
+              lastct = 0;
+              printf("state of proccess is %d with pid %d, %ld, %d\n", p->state, p->pid, p->trapframe->epc, t->id);
+              printf("more informaiton %ld, %ld \n", p->trapframe->kernel_sp, p->trapframe->sp);
+              for(j = p->threads; j < &p->threads[MAX_THREAD]; j++){
+                printf("state of thread is %d with tid %d, %ld|, %d\n", j->state, j->id, j->trapframe->epc, p->currenct_thread->id);
+              }
+              // if (p->currenct_thread->id == 13)
+              //   printf("---------------------------------------------------------------------------------------------------------------------\n");
             }
 
             // Process is done running for now.

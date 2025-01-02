@@ -11,7 +11,7 @@ struct superblock;
 struct report_traps;
 struct trapframe;
 #include "user/repstruct.h"
-
+#include "user/mystruct.h"
 
 // bio.c
 void            binit(void);
@@ -121,6 +121,9 @@ struct child_proccesses* get_child(int pid);
 void log_trap(struct proc* p, uint64 scause, uint64 spec, uint64 stval);
 void get_log(int pid, struct report_traps*);
 int create_thread(void *(*start_routine)(void*), void *arg);
+int             cpu_usage(void);
+int             top(struct top*);
+int             set_cpu_quota(int pid , int quota);
 
 // swtch.S
 void            swtch(struct context*, struct context*);

@@ -7,6 +7,7 @@ struct proc_info {
   int pid;                     // Process ID
   int ppid;         // Parent process ID
   char name[16];               // Process name (debugging)
+  struct cpu_usage usage; 
 };
 
 struct child_proccesses {
@@ -14,5 +15,21 @@ struct child_proccesses {
 //   int ppid;         // Parent process ID
   struct proc_info proccesses[64];               // Process name (debugging)
 };
+
+struct cpu_usage {
+  uint sum_of_ticks; //shows cpu usage of process 
+  uint start_tick; //set at the response time
+  uint quota; //how it could use?
+};
+
+
+struct top
+{
+  int count;
+  struct proc_info processes[NPROC];
+};
+
+
+
 
 #endif // MYSTRUCT_H

@@ -1083,3 +1083,25 @@ void get_log(int pid, struct report_traps* result){
   return;
 }
 
+int 
+cpu_usge(void){
+
+
+  return ;
+}
+
+
+int 
+top(struct top* top){
+
+
+  return ;
+}
+
+
+int 
+set_cpu_quota(int pid , int quota){
+
+
+  return ;
+}

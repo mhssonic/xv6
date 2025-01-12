@@ -163,8 +163,20 @@ sys_stop_thread(void)
 
 uint64
 sys_cpu_usage(void){
-  
-  return cpu_usage() ;
+  int pid;
+  argint(0, &pid);
+
+  struct cpu_usage_info usage;
+  if(cpu_usage(pid, &usage) != 0)
+    return -1;
+
+  uint64 uaddr;
+  argaddr(1, &uaddr);
+  // Copy the info struct to the user-space address
+  if (copyout(myproc()->pagetable, uaddr, (char *)&usage, sizeof(usage)) < 0) {
+      return -1;  // Error if copy fails
+  }
+  return 0;
 }
 
 uint64

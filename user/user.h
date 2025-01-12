@@ -1,6 +1,8 @@
 struct stat;
 struct child_proccesses;
 struct report_traps;
+struct cpu_usage_info;
+struct top;
 
 // system calls
 int fork(void);
@@ -29,7 +31,8 @@ int get_log(int pid, struct report_traps* reports);
 int create_thread(void (*start_routine)(void*), void *arg);
 int join_thread(int);
 int exit_thread(int);
-int top(void);
+int top(void); //its suppose to give back top information not jsut print it
+int cpu_usage(int pid, struct cpu_usage_info* usage);
 
 // ulib.c
 int stat(const char*, struct stat*);

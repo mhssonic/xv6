@@ -29,22 +29,24 @@ void god(void *arg) {
 
     int *number = arg;
     printf("number is %d, %p\n", *number, number);
-    // for (int i = 0; i < 100; ++i) {
-    //     (*number)++;
+    for (int i = 0; i < 100; ++i) {
+        // (*number)++;
 
-    //     if (number == &a) {
-    //         printf("thread a: %d\n", *number);
-    //     } else if (number == &b) {
-    //         printf("thread b: %d\n", *number);
-    //     } else {
-    //         printf("thread c: %d\n", *number);
-    //     }
-    // }
+        // if (number == &a) {
+        //     printf("thread a: %d\n", *number);
+        // } else if (number == &b) {
+        //     printf("thread b: %d\n", *number);
+        // } else {
+        //     printf("thread c: %d\n", *number);
+        // }
+        printf("%d\n", i);
+    }
     return;
 }
 
 
 int main(int argc, char *argv[]) {
+    printf("%d\n", a);
     if (argc == 42) my_thread(0);
     // printf("%p \n", (void *)((volatile void *)&my_thread));
     // printf("%p \n", (void *)((volatile void *)my_thread));

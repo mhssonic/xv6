@@ -1084,7 +1084,7 @@ void get_log(int pid, struct report_traps* result){
 }
 
 int 
-cpu_usage(void){
+cpu_usage(int pid, struct cpu_usage_info* usage){
   //struct proc *mp = myproc();
 
   

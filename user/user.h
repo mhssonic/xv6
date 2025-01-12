@@ -29,6 +29,7 @@ int get_log(int pid, struct report_traps* reports);
 int create_thread(void (*start_routine)(void*), void *arg);
 int join_thread(int);
 int exit_thread(int);
+int top(void);
 
 // ulib.c
 int stat(const char*, struct stat*);

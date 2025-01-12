@@ -168,7 +168,7 @@ sys_cpu_usage(void){
 }
 
 uint64
-sys_cpu_top(void){
+sys_top(void){
   struct top top_list;
 
   return top(&top_list) ;

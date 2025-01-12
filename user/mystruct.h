@@ -1,3 +1,4 @@
+#include "kernel/param.h"
 #ifndef MYSTRUCT_H
 #define MYSTRUCT_H
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
@@ -7,7 +8,7 @@ struct proc_info {
   int pid;                     // Process ID
   int ppid;         // Parent process ID
   char name[16];               // Process name (debugging)
-  struct cpu_usage usage; 
+  //struct cpu_usage usage; 
 };
 
 struct child_proccesses {

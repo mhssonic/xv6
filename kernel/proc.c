@@ -1084,18 +1084,43 @@ void get_log(int pid, struct report_traps* result){
 }
 
 int 
-cpu_usge(void){
+cpu_usage(void){
+  //struct proc *mp = myproc();
 
+  
 
-  return ;
+  return 0;
 }
 
 
 int 
 top(struct top* top){
+  struct proc* p;
+  p = myproc();
+  int i = 0;
+  while(p->parent != NULL){
+  strncpy(top->processes->name , p->name , 16);
+  top->processes[i].pid = p->pid;
+  top->processes[i].ppid = p->parent->pid;
+  top->processes[i].state = p->state;
+  i++;
+  p = p->parent;
+  }
+top->count = i;
+
+  printf("top is here.\n");
+  printf("number of processes:%d\n" ,top->count);
+  printf("PID\tPPID\tSTATE\tNAME\tSTART\tUSAGE\n");
+  
+  for(int i = 0 ; i < top->count ; i++){
+    
+    printf("%d\t%d\t%d\t%s\n" , top->processes[i].pid , top->processes[i].ppid , top->processes[i].state , top->processes[i].name);
+  }
 
 
-  return ;
+
+
+  return 0;
 }
 
 
@@ -1103,5 +1128,5 @@ int
 set_cpu_quota(int pid , int quota){
 
 
-  return ;
+  return 0;
 }

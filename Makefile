@@ -142,6 +142,7 @@ UPROGS=\
 	$U/_fchilderen\
 	$U/_glog\
 	$U/_test_thread\
+	$U/_top\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

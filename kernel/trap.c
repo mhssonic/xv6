@@ -49,7 +49,12 @@ usertrap(void)
   
   // save user program counter.
   p->trapframe->epc = r_sepc();
-  
+
+  // printf("sum: %d\n", p->usage->sum_of_ticks);
+  // printf("ticks: %d\n", ticks);
+  p->usage->sum_of_ticks += ticks - p->usage->start_tick;
+  p->usage->start_tick = ticks;
+
   if(r_scause() == 8){
     // system call
 

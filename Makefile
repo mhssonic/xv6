@@ -143,6 +143,7 @@ UPROGS=\
 	$U/_glog\
 	$U/_test_thread\
 	$U/_top\
+	$U/_cpu_usage\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

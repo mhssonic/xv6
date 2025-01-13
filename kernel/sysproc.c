@@ -160,3 +160,38 @@ sys_stop_thread(void)
   
   return stop_thread(tid);
 } 
+
+uint64
+sys_cpu_usage(void){
+  int pid;
+  argint(0, &pid);
+
+  struct cpu_usage_info usage;
+  if(cpu_usage(pid, &usage) != 0)
+    return -1;
+
+  uint64 uaddr;
+  argaddr(1, &uaddr);
+  // Copy the info struct to the user-space address
+  if (copyout(myproc()->pagetable, uaddr, (char *)&usage, sizeof(usage)) < 0) {
+      return -1;  // Error if copy fails
+  }
+  return 0;
+}
+
+uint64
+sys_top(void){
+  struct top top_list;
+
+  return top(&top_list) ;
+}
+
+uint64
+sys_set_cpu_quota(void){
+  int pid;
+  int quota;
+  argint(0, &pid);
+  argint(1, &quota);
+
+  return set_cpu_quota(pid , quota);
+}

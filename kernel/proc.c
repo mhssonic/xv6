@@ -192,6 +192,13 @@ found:
     release(&p->lock);
     return 0;
   }
+    // // Allocate a cpu usage.
+  if((p->usage = (struct cpu_usage_info *)kalloc()) == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+  memset(p->usage, 0, sizeof(p->usage));
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
@@ -408,6 +415,8 @@ fork(void)
 
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
+
+  // *(np->usage) = *(p->usage);
 
   // increment reference counts on open file descriptors.
   for(i = 0; i < NOFILE; i++)
@@ -745,6 +754,8 @@ scheduler(void)
               memmove(p->currenct_thread->trapframe,p->trapframe,sizeof (struct trapframe));
             p->currenct_thread = t;
             memmove(p->trapframe,t->trapframe,sizeof (struct trapframe));
+
+            p->usage->start_tick = ticks;
             swtch(&c->context, &p->context);
             // if (t->state != THREAD_FREE)
             //   memmove(t->trapframe,p->trapframe,sizeof (struct trapframe));
@@ -793,6 +804,12 @@ sched(void)
     panic("sched interruptible");
 
   intena = mycpu()->intena;
+
+  // printf("sched sum: %d %d\n", p->usage->sum_of_ticks, p->pid);
+  // printf("sched ticks: %d %d\n", ticks, p->pid);
+  p->usage->sum_of_ticks += ticks - p->usage->start_tick;
+  p->usage->start_tick = ticks;
+
   swtch(&p->context, &mycpu()->context);
   mycpu()->intena = intena;
 }
@@ -1083,3 +1100,57 @@ void get_log(int pid, struct report_traps* result){
   return;
 }
 
+int 
+cpu_usage(int pid, struct cpu_usage_info* usage){
+  struct proc *p;
+
+  for(p = proc; p < &proc[NPROC]; p++){
+    if(p->pid == pid){
+      *usage = *(p->usage);
+      if(p->state == RUNNING){
+        usage->sum_of_ticks += ticks - usage->start_tick;
+      }
+      return 0;
+    }
+  }
+  return 0;
+}
+
+
+int 
+top(struct top* top){
+  struct proc* p;
+  p = myproc();
+  int i = 0;
+  while(p->parent != NULL){
+  strncpy(top->processes->name , p->name , 16);
+  top->processes[i].pid = p->pid;
+  top->processes[i].ppid = p->parent->pid;
+  top->processes[i].state = p->state;
+  i++;
+  p = p->parent;
+  }
+top->count = i;
+
+  printf("top is here.\n");
+  printf("number of processes:%d\n" ,top->count);
+  printf("PID\tPPID\tSTATE\tNAME\tSTART\tUSAGE\n");
+  
+  for(int i = 0 ; i < top->count ; i++){
+    
+    printf("%d\t%d\t%d\t%s\n" , top->processes[i].pid , top->processes[i].ppid , top->processes[i].state , top->processes[i].name);
+  }
+
+
+
+
+  return 0;
+}
+
+
+int 
+set_cpu_quota(int pid , int quota){
+
+
+  return 0;
+}

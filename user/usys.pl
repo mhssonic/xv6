@@ -41,3 +41,6 @@ entry("get_log");
 entry("create_thread");
 entry("join_thread");
 entry("stop_thread");
+entry("top");
+entry("cpu_usage");
+entry("set_cpu_quota");

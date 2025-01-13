@@ -182,8 +182,16 @@ sys_cpu_usage(void){
 uint64
 sys_top(void){
   struct top top_list;
+  if(top(&top_list) != 0)
+    return -1;
 
-  return top(&top_list) ;
+  uint64 uaddr;
+  argaddr(0, &uaddr);
+  // Copy the info struct to the user-space address
+  if (copyout(myproc()->pagetable, uaddr, (char *)&top_list, sizeof(top_list)) < 0) {
+      return -1;  // Error if copy fails
+  }
+  return 0;
 }
 
 uint64

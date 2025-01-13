@@ -52,8 +52,8 @@ usertrap(void)
 
   // printf("sum: %d\n", p->usage->sum_of_ticks);
   // printf("ticks: %d\n", ticks);
-  p->usage->sum_of_ticks += ticks - p->usage->start_tick;
-  p->usage->start_tick = ticks;
+  p->usage->sum_of_ticks += ticks - p->usage->last_calculated_tick;
+  p->usage->last_calculated_tick = ticks;
 
   if(r_scause() == 8){
     // system call

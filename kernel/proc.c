@@ -32,6 +32,7 @@ static void freethread(struct thread *t);
 static void freeproc(struct proc *p);
 void get_child_reverse(int, struct proc_info[], int*);
 static void freethread(struct thread *t);
+void sort_processes(struct proc_info *processes, int num_processes);
 
 
 extern char trampoline[]; // trampoline.S
@@ -755,7 +756,11 @@ scheduler(void)
             p->currenct_thread = t;
             memmove(p->trapframe,t->trapframe,sizeof (struct trapframe));
 
-            p->usage->start_tick = ticks;
+            p->usage->last_calculated_tick = ticks;
+            if(p->usage->start_tick == 0)
+              p->usage->start_tick = ticks;
+            if (p->pid == 3)
+              p->usage->start_tick = 3;
             swtch(&c->context, &p->context);
             // if (t->state != THREAD_FREE)
             //   memmove(t->trapframe,p->trapframe,sizeof (struct trapframe));
@@ -807,8 +812,8 @@ sched(void)
 
   // printf("sched sum: %d %d\n", p->usage->sum_of_ticks, p->pid);
   // printf("sched ticks: %d %d\n", ticks, p->pid);
-  p->usage->sum_of_ticks += ticks - p->usage->start_tick;
-  p->usage->start_tick = ticks;
+  p->usage->sum_of_ticks += ticks - p->usage->last_calculated_tick;
+  p->usage->last_calculated_tick = ticks;
 
   swtch(&p->context, &mycpu()->context);
   mycpu()->intena = intena;
@@ -1108,7 +1113,7 @@ cpu_usage(int pid, struct cpu_usage_info* usage){
     if(p->pid == pid){
       *usage = *(p->usage);
       if(p->state == RUNNING){
-        usage->sum_of_ticks += ticks - usage->start_tick;
+        usage->sum_of_ticks += ticks - usage->last_calculated_tick;
       }
       return 0;
     }
@@ -1120,30 +1125,26 @@ cpu_usage(int pid, struct cpu_usage_info* usage){
 int 
 top(struct top* top){
   struct proc* p;
-  p = myproc();
+  struct proc_info* info;
   int i = 0;
-  while(p->parent != NULL){
-  strncpy(top->processes->name , p->name , 16);
-  top->processes[i].pid = p->pid;
-  top->processes[i].ppid = p->parent->pid;
-  top->processes[i].state = p->state;
-  i++;
-  p = p->parent;
+  for(p = proc; p < &proc[NPROC]; p++){
+    if(p->state == UNUSED)
+      continue;
+    info = &top->processes[i++];
+    info->pid = p->pid;
+    strncpy(info->name, p->name, 16);
+    if(p->parent != 0)
+      info->ppid = p->parent->pid;
+    else
+      info->ppid = -1;
+    info->state = p->state;
+    info->usage = *(p->usage);
+    if(p->state == RUNNING){
+      info->usage.sum_of_ticks += ticks - info->usage.last_calculated_tick;
+    }
   }
-top->count = i;
-
-  printf("top is here.\n");
-  printf("number of processes:%d\n" ,top->count);
-  printf("PID\tPPID\tSTATE\tNAME\tSTART\tUSAGE\n");
-  
-  for(int i = 0 ; i < top->count ; i++){
-    
-    printf("%d\t%d\t%d\t%s\n" , top->processes[i].pid , top->processes[i].ppid , top->processes[i].state , top->processes[i].name);
-  }
-
-
-
-
+  top->count = i;
+  sort_processes(top->processes, i);
   return 0;
 }
 
@@ -1153,4 +1154,25 @@ set_cpu_quota(int pid , int quota){
 
 
   return 0;
+}
+
+
+void sort_processes(struct proc_info *processes, int num_processes) {
+    int i, j, max_idx;
+    struct proc_info temp;
+
+    for (i = 0; i < num_processes - 1; i++) {
+        max_idx = i;
+        for (j = i + 1; j < num_processes; j++) {
+            if (processes[j].usage.sum_of_ticks > processes[max_idx].usage.sum_of_ticks) {
+                max_idx = j;
+            }
+        }
+
+        if (max_idx != i) {
+            temp = processes[i];
+            processes[i] = processes[max_idx];
+            processes[max_idx] = temp;
+        }
+    }
 }

@@ -1244,6 +1244,7 @@ fork_with_deadline(uint deadline)
     return -1;
   }
 
+  printf("%d, tick:%d , deadline:%d\n", ticks + deadline, ticks, deadline);
   np->usage->deadline = ticks + deadline;
 
   // Copy user memory from parent to child.

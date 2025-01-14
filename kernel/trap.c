@@ -55,7 +55,7 @@ usertrap(void)
   p->usage->sum_of_ticks += ticks - p->usage->last_calculated_tick;
   p->usage->last_calculated_tick = ticks;
   
-  if(p->usage->deadline > 0 && p->usage->deadline > ticks) {
+  if(p->usage->deadline > 0 && p->usage->deadline < ticks) {
     exit(1);
   }
   

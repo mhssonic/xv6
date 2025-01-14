@@ -144,6 +144,7 @@ UPROGS=\
 	$U/_test_thread\
 	$U/_top\
 	$U/_cpu_usage\
+	$U/_set_cpu_quota\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

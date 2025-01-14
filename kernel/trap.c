@@ -56,7 +56,7 @@ usertrap(void)
   p->usage->last_calculated_tick = ticks;
   
 
-  }
+  
   if(r_scause() == 8){
     // system call
 

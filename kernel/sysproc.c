@@ -203,3 +203,11 @@ sys_set_cpu_quota(void){
 
   return set_cpu_quota(pid , quota);
 }
+
+
+uint64
+sys_fork_with_deadline(void){
+  uint deadline;
+  argint(0,&deadline);
+  return fork2(deadline);
+}

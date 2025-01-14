@@ -748,6 +748,9 @@ scheduler(void)
             acquire(&t->lock);
 
             if(t->state == THREAD_RUNNABLE) {
+              if(p->usage->deadline > p->usage->last_calculated_tick) {
+                exit(0);
+              }
               // Switch to chosen process.  It is the process's job
               // to release its lock and then reacquire it
               // before jumping back to us.
@@ -838,6 +841,7 @@ sched(void)
     }
   }
   */
+  
   swtch(&p->context, &mycpu()->context);
   mycpu()->intena = intena;
 }
@@ -1216,4 +1220,72 @@ void sort_processes(struct proc_info *processes, int num_processes) {
             processes[max_idx] = temp;
         }
     }
+}
+
+
+
+int
+fork2(uint deadline)
+{
+  int i, pid;
+  struct proc *np;
+  struct proc *p = myproc();
+
+  // Allocate process.
+  if((np = allocproc()) == 0){
+    return -1;
+  }
+
+  p->usage->deadline = deadline;
+
+  // Copy user memory from parent to child.
+  if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
+    freeproc(np);
+    release(&np->lock);
+    return -1;
+  }
+  np->sz = p->sz;
+
+  // copy saved user registers.
+  *(np->trapframe) = *(p->trapframe);
+
+  struct thread *nt, *ot;
+  for (nt = np->threads, ot = p->threads; nt < &np->threads[MAX_THREAD]; nt++, ot++) {
+    //TODO its wrong and broken
+    nt->join = ot->join;
+    nt->state = ot->state;
+    *(nt->trapframe) = *(ot->trapframe);
+    if (p->currenct_thread == ot)
+      np->currenct_thread = nt;
+  }
+  // np->trapframe = np->currenct_thread->trapframe;
+
+
+  // Cause fork to return 0 in the child.
+  np->trapframe->a0 = 0;
+
+  // *(np->usage) = *(p->usage);
+
+  // increment reference counts on open file descriptors.
+  for(i = 0; i < NOFILE; i++)
+    if(p->ofile[i])
+      np->ofile[i] = filedup(p->ofile[i]);
+  np->cwd = idup(p->cwd);
+
+  safestrcpy(np->name, p->name, sizeof(p->name));
+
+  pid = np->pid;
+  release(&np->lock);
+
+  acquire(&wait_lock);
+  np->parent = p;
+  release(&wait_lock);
+
+  acquire(&np->lock);
+  np->state = RUNNABLE;
+  acquire(&np->currenct_thread->lock);
+  np->currenct_thread->state = THREAD_RUNNABLE;
+  release(&np->currenct_thread->lock);
+  release(&np->lock);
+  return pid;
 }

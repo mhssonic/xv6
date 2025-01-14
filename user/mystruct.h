@@ -9,6 +9,7 @@ struct cpu_usage_info {
   uint sum_of_ticks; //shows cpu usage of process 
   uint last_calculated_tick; //set at the response time
   uint quota; //how it could use?
+  uint deadline;
 };
 
 struct proc_info {

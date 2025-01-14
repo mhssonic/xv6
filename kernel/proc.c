@@ -68,7 +68,7 @@ procinit(void)
   struct proc *p;
   struct thread *t;
   
-  
+  //initlock(&proc , "proc");
   initlock(&pid_lock, "nextpid");
   initlock(&tid_lock, "nexttid");
   initlock(&wait_lock, "wait_lock");
@@ -200,6 +200,7 @@ found:
     return 0;
   }
   memset(p->usage, 0, sizeof(p->usage));
+  p->usage->quota = 2; 
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
@@ -814,7 +815,22 @@ sched(void)
   // printf("sched ticks: %d %d\n", ticks, p->pid);
   p->usage->sum_of_ticks += ticks - p->usage->last_calculated_tick;
   p->usage->last_calculated_tick = ticks;
+  /*
+  if(p->usage->sum_of_ticks > p->usage->quota){
+    if (p->usage->sum_of_ticks > p->usage->quota) {
+    struct proc temp = *p; 
+    int i;
+  
+    for (i = p->pid; i < NPROC - 1; i++) {
+      //acquire(proc);
+        proc[i] = proc[i - 1];
+      //release(proc);  
+    }
 
+    proc[NPROC - 1] = temp;
+    }
+  }
+  */
   swtch(&p->context, &mycpu()->context);
   mycpu()->intena = intena;
 }
@@ -1151,10 +1167,32 @@ top(struct top* top){
 
 int 
 set_cpu_quota(int pid , int quota){
+  struct proc *p;
+  int found = 0; 
 
+  for(p = proc; p < &proc[NPROC]; p++){
+    if(p->state == UNUSED) 
+      continue;
+
+    if(p->pid == pid){
+      p->usage->quota = quota;
+      found = 1;
+      printf("%d\n",p->pid);
+      printf("%d\n",p->usage->quota);
+    } 
+    else if(p->parent && p->parent->pid == pid){
+      set_cpu_quota(p->pid, quota); 
+    }
+  }
+
+  if (!found) {
+    printf("process with pid : %d not found.\n", pid);
+    return -1;
+  }
 
   return 0;
 }
+
 
 
 void sort_processes(struct proc_info *processes, int num_processes) {

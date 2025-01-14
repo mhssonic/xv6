@@ -738,43 +738,50 @@ scheduler(void)
     intr_on();
 
     int found = 0;
-    for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        for(t = p->threads; t < &p->threads[MAX_THREAD]; t++) {
-          // printf("trying to run a thread\n");
-          acquire(&t->lock);
+    int qeuee = 0;
+    for(;;){
+      for(p = proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+        if(p->state == RUNNABLE && (qeuee || p->usage->sum_of_ticks < p->usage->quota)) {
+          for(t = p->threads; t < &p->threads[MAX_THREAD]; t++) {
+            // printf("trying to run a thread\n");
+            acquire(&t->lock);
 
-          if(t->state == THREAD_RUNNABLE) {
-            // Switch to chosen process.  It is the process's job
-            // to release its lock and then reacquire it
-            // before jumping back to us.
-            p->state = RUNNING;
-            t->state = THREAD_RUNNING;
-            c->proc = p;
-            if (p->currenct_thread->state != THREAD_FREE)
-              memmove(p->currenct_thread->trapframe,p->trapframe,sizeof (struct trapframe));
-            p->currenct_thread = t;
-            memmove(p->trapframe,t->trapframe,sizeof (struct trapframe));
+            if(t->state == THREAD_RUNNABLE) {
+              // Switch to chosen process.  It is the process's job
+              // to release its lock and then reacquire it
+              // before jumping back to us.
+              p->state = RUNNING;
+              t->state = THREAD_RUNNING;
+              c->proc = p;
+              if (p->currenct_thread->state != THREAD_FREE)
+                memmove(p->currenct_thread->trapframe,p->trapframe,sizeof (struct trapframe));
+              p->currenct_thread = t;
+              memmove(p->trapframe,t->trapframe,sizeof (struct trapframe));
 
-            p->usage->last_calculated_tick = ticks;
-            if(p->usage->start_tick == 0)
-              p->usage->start_tick = ticks;
-            if (p->pid == 3)
-              p->usage->start_tick = 3;
-            swtch(&c->context, &p->context);
-            // if (t->state != THREAD_FREE)
-            //   memmove(t->trapframe,p->trapframe,sizeof (struct trapframe));
+              p->usage->last_calculated_tick = ticks;
+              if(p->usage->start_tick == 0)
+                p->usage->start_tick = ticks;
+              if (p->pid == 3)
+                p->usage->start_tick = 3;
+              swtch(&c->context, &p->context);
+              // if (t->state != THREAD_FREE)
+              //   memmove(t->trapframe,p->trapframe,sizeof (struct trapframe));
 
-            // Process is done running for now.
-            // It should have changed its p->state before coming back.
-            c->proc = 0;
-            found = 1;
+              // Process is done running for now.
+              // It should have changed its p->state before coming back.
+              c->proc = 0;
+              found = 1;
+            }
+            release(&t->lock);
           }
-          release(&t->lock);
         }
+        release(&p->lock);
       }
-      release(&p->lock);
+      if(!found && qeuee)
+        break;
+      if(!found)
+        qeuee = 1;
     }
     if(found == 0) {
       intr_on();

@@ -742,6 +742,9 @@ scheduler(void)
     for(;;){
       for(p = proc; p < &proc[NPROC]; p++) {
         acquire(&p->lock);
+        if(p->pid == 4 || p->pid == 5 || p->pid == 6){
+          // printf("pid:%d are found%d qeuee:%d sum:%d state: %d\n", p->pid, found, qeuee, p->usage->sum_of_ticks, p->state);
+        }
         if(p->state == RUNNABLE && (qeuee || p->usage->sum_of_ticks < p->usage->quota)) {
           for(t = p->threads; t < &p->threads[MAX_THREAD]; t++) {
             // printf("trying to run a thread\n");
@@ -772,16 +775,23 @@ scheduler(void)
               // It should have changed its p->state before coming back.
               c->proc = 0;
               found = 1;
+              if(p->usage->sum_of_ticks < p->usage->quota){
+                qeuee = 0;
+              }
             }
             release(&t->lock);
           }
         }
         release(&p->lock);
       }
+      // printf("found %d, qeuee %d", found, qeuee);
       if(!found && qeuee)
         break;
       if(!found)
         qeuee = 1;
+      else
+        qeuee = 0;
+      found = 0;
     }
     if(found == 0) {
       intr_on();
@@ -1177,6 +1187,7 @@ set_cpu_quota(int pid , int quota){
   struct proc *p;
   struct proc *parent;
   struct proc *executer = myproc();
+  // printf("im here with pid: %d and quota %d", pid, quota);
 
   for(p = proc; p < &proc[NPROC]; p++){
     if(p->state == UNUSED) 

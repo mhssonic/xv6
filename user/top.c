@@ -5,39 +5,47 @@
 
 void print_processes(struct top *top_res);
 int main(){
-    for(int i = 0; i<3 ; i++){
-        if(fork() == 0){
-            int a = 1;
+    int a = 1;
+    int fork_id[3];
+    for(int i = 0; i<4 ; i++){
+        if((fork_id[i] = fork()) == 0){
+
             for (int j = 0; j < 100000; j++)
             for (int i = 0; i < 100000; i++)
                 a *= 2;
-            printf("im going to sleep\n");
+            printf("im going to sleep %d\n", i);
             sleep(100);
             exit(0);
         }
     }
-    sleep(20);
+    // sleep(20);
+    set_cpu_quota(fork_id[1], 20);
+    set_cpu_quota(fork_id[2], 30);
+    set_cpu_quota(fork_id[3], 20);
     while(1){
         struct top* top_res = malloc(sizeof(*top_res));
         if(top(top_res) < 0){
             return -1;
         }
         print_processes(top_res);
-        sleep(20);
+        sleep(10);
+        for (int j = 0; j < 10000; j++)
+        for (int i = 0; i < 10000; i++)
+            a *= 2;
     }
     return 0;
 }
 
 void print_processes(struct top *top_res) {
-    printf("number of child: %d\n", top_res->count);
-    printf("PID\tPPID\tSTART\tUSAGE\tSTATE\t\tNAME\n");
+    printf("number of process: %d\n", top_res->count);
+    printf("PID\tPPID\tSTART\tUSAGE\tQUOTA\tSTATE\t\tNAME\n");
     struct proc_info *proc;
     struct proc_info *last = &top_res->processes[top_res->count -1];
     for (proc = top_res->processes; proc <= last; proc++) {
         
 
         // Print PID and PPID
-        printf("%d\t%d\t%d\t%d\t", proc->pid, proc->ppid, proc->usage.start_tick, proc->usage.sum_of_ticks);
+        printf("%d\t%d\t%d\t%d\t%d\t", proc->pid, proc->ppid, proc->usage.start_tick, proc->usage.sum_of_ticks, proc->usage.quota);
         
 
         // Print the state (convert enum procstate to string)

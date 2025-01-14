@@ -18,7 +18,7 @@ int main(){
             exit(0);
         }
     }
-    if (fork_with_deadline(10) == 0){
+    if (fork_with_deadline(40) == 0){
         for (int j = 0; j < 100000; j++)
         for (int i = 0; i < 100000; i++)
             a *= 2;
@@ -28,8 +28,8 @@ int main(){
     }
     
     // sleep(20);
-    set_cpu_quota(fork_id[1], 20);
-    set_cpu_quota(fork_id[2], 30);
+    // set_cpu_quota(fork_id[1], 20);
+    // set_cpu_quota(fork_id[2], 30);
     set_cpu_quota(fork_id[3], 20);
 
     while(1){

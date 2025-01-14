@@ -727,9 +727,13 @@ void
 scheduler(void)
 {
   struct proc *p;
+  struct proc *prun, *pitorate;
   struct thread *t;
   struct cpu *c = mycpu();
+  int found = 0;
+  int qeuee = 0;
 
+  int nearest_deadline = 0;
   c->proc = 0;
   for(;;){
     // The most recent process to run may have had interrupts
@@ -737,15 +741,30 @@ scheduler(void)
     // processes are waiting.
     intr_on();
 
-    int found = 0;
-    int qeuee = 0;
+    found = 0;
+    qeuee = 0;
     for(;;){
       for(p = proc; p < &proc[NPROC]; p++) {
-        acquire(&p->lock);
         if(p->pid == 4 || p->pid == 5 || p->pid == 6){
           // printf("pid:%d are found%d qeuee:%d sum:%d state: %d\n", p->pid, found, qeuee, p->usage->sum_of_ticks, p->state);
         }
-        if(p->state == RUNNABLE && (qeuee || p->usage->sum_of_ticks < p->usage->quota)) {
+        nearest_deadline = 0;
+        prun = 0;
+        for(pitorate = p; pitorate < &proc[NPROC]; pitorate++) {
+          acquire(&pitorate->lock);
+          if(pitorate->state == RUNNABLE && (qeuee || pitorate->usage->sum_of_ticks < pitorate->usage->quota)) {
+            if(pitorate->usage->deadline && (!nearest_deadline || pitorate->usage->deadline < nearest_deadline)){
+              nearest_deadline = pitorate->usage->deadline;
+              prun = pitorate;
+            }
+          }
+          release(&pitorate->lock);
+        }
+        if (prun){
+          p = prun;
+        }
+        acquire(&p->lock);
+        if(prun || (p->state == RUNNABLE && (qeuee || p->usage->sum_of_ticks < p->usage->quota))) {
           for(t = p->threads; t < &p->threads[MAX_THREAD]; t++) {
             // printf("trying to run a thread\n");
             acquire(&t->lock);
@@ -765,8 +784,6 @@ scheduler(void)
               p->usage->last_calculated_tick = ticks;
               if(p->usage->start_tick == 0)
                 p->usage->start_tick = ticks;
-              if (p->pid == 3)
-                p->usage->start_tick = 3;
               swtch(&c->context, &p->context);
               // if (t->state != THREAD_FREE)
               //   memmove(t->trapframe,p->trapframe,sizeof (struct trapframe));
@@ -784,6 +801,9 @@ scheduler(void)
         }
         release(&p->lock);
       }
+      
+
+
       // printf("found %d, qeuee %d", found, qeuee);
       if(!found && qeuee)
         break;

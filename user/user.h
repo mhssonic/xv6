@@ -34,6 +34,7 @@ int exit_thread(int);
 int top(struct top* top);
 int cpu_usage(int pid, struct cpu_usage_info* usage);
 int set_cpu_quota(int pid , int quota);
+int fork_with_deadline(int deadline);
 
 // ulib.c
 int stat(const char*, struct stat*);

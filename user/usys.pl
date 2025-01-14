@@ -44,3 +44,4 @@ entry("stop_thread");
 entry("top");
 entry("cpu_usage");
 entry("set_cpu_quota");
+entry("fork_with_deadline");

@@ -124,7 +124,7 @@ int             create_thread(void *(*start_routine)(void*), void *arg);
 int             cpu_usage(int pid, struct cpu_usage_info*);
 int             top(struct top*);
 int             set_cpu_quota(int pid , int quota);
-int             fork2(uint deadline);
+int             fork_with_deadline(uint deadline);
 // swtch.S
 void            swtch(struct context*, struct context*);
 

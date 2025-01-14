@@ -207,7 +207,7 @@ sys_set_cpu_quota(void){
 
 uint64
 sys_fork_with_deadline(void){
-  uint deadline;
+  int deadline;
   argint(0,&deadline);
-  return fork2(deadline);
+  return fork_with_deadline((uint)deadline);
 }

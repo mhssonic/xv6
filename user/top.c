@@ -11,17 +11,27 @@ int main(){
         if((fork_id[i] = fork()) == 0){
 
             for (int j = 0; j < 100000; j++)
-            for (int i = 0; i < 100000; i++)
+            for (int k = 0; k < 100000; k++)
                 a *= 2;
             printf("im going to sleep %d\n", i);
             sleep(100);
             exit(0);
         }
     }
+    if (fork_with_deadline(10) == 0){
+        for (int j = 0; j < 100000; j++)
+        for (int i = 0; i < 100000; i++)
+            a *= 2;
+        printf("im going to sleep %d\n", -1);
+        sleep(100);
+        exit(0);
+    }
+    
     // sleep(20);
     set_cpu_quota(fork_id[1], 20);
     set_cpu_quota(fork_id[2], 30);
     set_cpu_quota(fork_id[3], 20);
+
     while(1){
         struct top* top_res = malloc(sizeof(*top_res));
         if(top(top_res) < 0){

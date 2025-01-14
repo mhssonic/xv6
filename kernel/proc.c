@@ -199,7 +199,7 @@ found:
     release(&p->lock);
     return 0;
   }
-  memset(p->usage, 0, sizeof(p->usage));
+  memset(p->usage, 0, sizeof(*p->usage));
   p->usage->quota = 2; 
 
   // Set up new context to start executing at forkret,
@@ -751,9 +751,6 @@ scheduler(void)
             acquire(&t->lock);
 
             if(t->state == THREAD_RUNNABLE) {
-              if(p->usage->deadline > p->usage->last_calculated_tick) {
-                exit(0);
-              }
               // Switch to chosen process.  It is the process's job
               // to release its lock and then reacquire it
               // before jumping back to us.
@@ -1236,7 +1233,7 @@ void sort_processes(struct proc_info *processes, int num_processes) {
 
 
 int
-fork2(uint deadline)
+fork_with_deadline(uint deadline)
 {
   int i, pid;
   struct proc *np;
@@ -1247,7 +1244,7 @@ fork2(uint deadline)
     return -1;
   }
 
-  p->usage->deadline = deadline;
+  np->usage->deadline = ticks + deadline;
 
   // Copy user memory from parent to child.
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){

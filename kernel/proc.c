@@ -1165,6 +1165,33 @@ top(struct top* top){
 }
 
 
+int 
+set_cpu_quota(int pid , int quota){
+  struct proc *p;
+  int found = 0; 
+
+  for(p = proc; p < &proc[NPROC]; p++){
+    if(p->state == UNUSED) 
+      continue;
+
+    if(p->pid == pid){
+      p->usage->quota = quota;
+      found = 1;
+      printf("%d\n",p->pid);
+      printf("%d\n",p->usage->quota);
+    } 
+    else if(p->parent && p->parent->pid == pid){
+      set_cpu_quota(p->pid, quota); 
+    }
+  }
+
+  if (!found) {
+    printf("process with pid : %d not found.\n", pid);
+    return -1;
+  }
+
+  return 0;
+}
 
 
 
